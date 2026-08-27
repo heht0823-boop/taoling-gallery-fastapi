@@ -1,3 +1,9 @@
+"""图片收藏的幂等事务与列表查询。
+
+收藏明细、图片累计数、用户统计和管理员审计日志在同一事务提交；重复添加或
+重复取消不会导致计数漂移。
+"""
+
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,11 +41,7 @@ async def add_favorite(
     if favorite:
         raise conflict("你已经收藏过这张图片")
 
-    stats = await db.scalar(
-        select(UserStat)
-        .where(UserStat.user_id == user.id)
-        .with_for_update()
-    )
+    stats = await db.scalar(select(UserStat).where(UserStat.user_id == user.id).with_for_update())
     db.add(Favorite(user_id=user.id, image_id=image.id))
     image.favorite_count += 1
     if stats:
@@ -94,11 +96,7 @@ async def remove_favorite(
             "favorite_count": image.favorite_count,
         }
 
-    stats = await db.scalar(
-        select(UserStat)
-        .where(UserStat.user_id == user.id)
-        .with_for_update()
-    )
+    stats = await db.scalar(select(UserStat).where(UserStat.user_id == user.id).with_for_update())
     await db.delete(favorite)
     image.favorite_count = max(image.favorite_count - 1, 0)
     if stats:
@@ -135,12 +133,15 @@ async def list_favorites(
         Image.status == "public",
         Image.deleted_at.is_(None),
     ]
-    total = await db.scalar(
-        select(func.count())
-        .select_from(Favorite)
-        .join(Image, Image.id == Favorite.image_id)
-        .where(*conditions)
-    ) or 0
+    total = (
+        await db.scalar(
+            select(func.count())
+            .select_from(Favorite)
+            .join(Image, Image.id == Favorite.image_id)
+            .where(*conditions)
+        )
+        or 0
+    )
     rows = await db.execute(
         select(Favorite, Image)
         .join(Image, Image.id == Favorite.image_id)

@@ -1,3 +1,9 @@
+"""个人中心资料、头像与密码路由。
+
+头像接口同时接受 multipart 文件和 JSON 远程地址，以兼容前端历史调用方式；
+资料与密码修改继续使用统一 Cookie 鉴权和统一响应包络。
+"""
+
 from fastapi import APIRouter, Depends, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import UploadFile as StarletteUploadFile
@@ -18,6 +24,8 @@ async def profile_summary(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
+    """返回当前用户资料及行为统计汇总。"""
+
     return api_response(await auth_service.get_user_with_stats(db, current_user.id))
 
 
@@ -29,6 +37,8 @@ async def update_profile(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
+    """修改用户名/邮箱/简介等可编辑资料。"""
+
     return api_response(
         await profile_service.update_profile(
             db,
@@ -41,6 +51,8 @@ async def update_profile(
 
 
 async def _read_avatar_input(request: Request) -> tuple[UploadFile | None, str | None]:
+    """根据 Content-Type 读取 multipart 文件或 JSON 远程头像地址。"""
+
     content_type = request.headers.get("content-type", "").lower()
     if content_type.startswith("multipart/form-data"):
         form = await request.form()
@@ -67,6 +79,8 @@ async def update_avatar(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
+    """保存新头像并在数据库失败时清理刚生成的文件。"""
+
     file, remote_url = await _read_avatar_input(request)
     asset = await avatar_service.store_avatar(file=file, remote_url=remote_url)
     try:
@@ -89,6 +103,8 @@ async def update_password(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
+    """校验旧密码后替换密码哈希。"""
+
     return api_response(
         await profile_service.update_password(
             db,

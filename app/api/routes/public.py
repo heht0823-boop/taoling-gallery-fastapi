@@ -1,3 +1,9 @@
+"""公开图库、分类标签及图片行为入口。
+
+这里同时保留 Node 原有的资源式收藏/下载路径；需要登录的操作只在依赖层
+校验 Cookie，公开列表和详情允许匿名访问并按需装配 ``is_favorited``。
+"""
+
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +29,8 @@ THUMBNAIL_CACHE_HEADERS = {
 
 
 def _parse_tag_ids(*values: int | str | None) -> list[int]:
+    """兼容 ``tag_id``、``tagId`` 和逗号分隔值，并稳定去重。"""
+
     tag_ids: set[int] = set()
     for value in values:
         if value is None:
@@ -39,6 +47,8 @@ def _parse_tag_ids(*values: int | str | None) -> list[int]:
 
 @router.get("/categories")
 async def categories(db: AsyncSession = Depends(get_db)):
+    """返回公开可用分类列表。"""
+
     return api_response(await image_service.list_categories(db))
 
 
@@ -48,9 +58,9 @@ async def tags(
     limit: int = Query(default=50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    return api_response(
-        await image_service.list_tags(db, keyword=keyword, limit=limit)
-    )
+    """返回公开标签，支持前端首页的 limit 限制。"""
+
+    return api_response(await image_service.list_tags(db, keyword=keyword, limit=limit))
 
 
 @router.get("/messages")
@@ -60,6 +70,8 @@ async def messages(
     parent_id: int | None = Query(default=None, alias="parent_id", ge=1),
     db: AsyncSession = Depends(get_db),
 ):
+    """分页返回审核通过的公开留言板及一层回复。"""
+
     return api_response(
         await message_service.list_board(
             db,
@@ -100,6 +112,8 @@ async def images(
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(optional_current_user),
 ):
+    """按 Vue 查询参数筛选、排序并分页返回公开图库。"""
+
     return api_response(
         await image_service.list_images(
             db,
@@ -125,6 +139,8 @@ async def image_thumbnail(
     quality: int | None = Query(default=None, ge=35, le=95),
     db: AsyncSession = Depends(get_db),
 ):
+    """生成/复用缩略图缓存；远程资源则返回受控重定向。"""
+
     result = await image_service.get_image_thumbnail(
         db,
         image_id=image_id,
@@ -151,6 +167,8 @@ async def image_detail(
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(optional_current_user),
 ):
+    """读取公开图片详情，并在登录时附加收藏状态。"""
+
     return api_response(
         await image_service.get_public_image(
             db,
@@ -168,6 +186,8 @@ async def create_image_view(
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(optional_current_user),
 ):
+    """记录一次图片浏览，登录与匿名访问均可调用。"""
+
     return api_response(
         await view_service.record_view(
             db,
@@ -188,6 +208,8 @@ async def add_image_favorite(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
+    """通过资源式 Node 路径收藏图片。"""
+
     return created(
         await favorite_service.add_favorite(
             db,
@@ -206,6 +228,8 @@ async def remove_image_favorite(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
+    """通过资源式 Node 路径幂等取消收藏。"""
+
     return api_response(
         await favorite_service.remove_favorite(
             db,
@@ -224,6 +248,8 @@ async def create_image_download(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
+    """记录下载快照，并以 Node 实际控制器语义返回 201。"""
+
     return created(
         await download_service.create_download(
             db,
@@ -242,6 +268,8 @@ async def related(
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(optional_current_user),
 ):
+    """返回同分类相关推荐，字段与图库列表完全一致。"""
+
     return api_response(
         await image_service.related_images(
             db,

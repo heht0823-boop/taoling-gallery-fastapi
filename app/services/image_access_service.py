@@ -1,3 +1,5 @@
+"""跨行为模块复用的公开图片访问校验。"""
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 

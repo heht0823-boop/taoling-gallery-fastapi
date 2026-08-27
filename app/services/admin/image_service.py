@@ -1,3 +1,9 @@
+"""管理后台图片上传、关联装配、CRUD 和软删除业务。
+
+图片、分类、标签关联、标签引用计数和审计日志共享同一数据库事务。上传文件先
+落到临时路径并通过 Pillow 完整解码，验证通过后才移动到公开目录。
+"""
+
 import asyncio
 from datetime import datetime
 from pathlib import Path
@@ -26,11 +32,15 @@ ALLOWED_STATUSES = {"public", "private", "draft", "deleted"}
 
 
 def _public_upload_url(path: Path) -> str:
+    """把上传根目录内的绝对路径转换成前端可访问的公开 URL。"""
+
     relative = path.resolve().relative_to(settings.upload_path.resolve())
     return f"{settings.app_url.rstrip('/')}/uploads/{relative.as_posix()}"
 
 
 def _verify_image(path: Path, expected_format: str) -> None:
+    """完整解码图片并核对真实格式，拒绝伪造 MIME 的文件。"""
+
     try:
         with PILImage.open(path) as image:
             actual_format = str(image.format or "").upper()
@@ -42,6 +52,8 @@ def _verify_image(path: Path, expected_format: str) -> None:
 
 
 async def upload_image(file: UploadFile | None) -> dict:
+    """限制格式/体积保存源图，并生成 420/520 两档前端展示变体。"""
+
     if not file:
         raise bad_request("请上传图片文件")
     type_config = ALLOWED_IMAGE_TYPES.get((file.content_type or "").lower())
@@ -58,9 +70,7 @@ async def upload_image(file: UploadFile | None) -> dict:
             while chunk := await file.read(1024 * 1024):
                 size += len(chunk)
                 if size > max_size:
-                    raise bad_request(
-                        f"图片文件不能超过 {settings.upload_max_size_mb}MB"
-                    )
+                    raise bad_request(f"图片文件不能超过 {settings.upload_max_size_mb}MB")
                 output.write(chunk)
         if not size:
             raise bad_request("图片文件不能为空")
@@ -100,10 +110,14 @@ async def upload_image(file: UploadFile | None) -> dict:
 
 
 def _normalize_tag_ids(values: list[int] | None) -> list[int]:
+    """过滤非正数标签 ID，排序去重后用于差量同步。"""
+
     return sorted({int(value) for value in values or [] if int(value) > 0})
 
 
 async def _validate_category(db: AsyncSession, category_id: int | None) -> None:
+    """允许不设分类，但拒绝引用不存在或已软删除的分类。"""
+
     if category_id is None:
         return
     exists = await db.scalar(
@@ -122,6 +136,8 @@ async def _sync_tags(
     image_id: int,
     tag_ids: list[int],
 ) -> None:
+    """差量同步图片标签，并同步增减每个标签的 ``usage_count``。"""
+
     next_ids = set(_normalize_tag_ids(tag_ids))
     if next_ids:
         found = set(
@@ -136,11 +152,7 @@ async def _sync_tags(
         )
         if found != next_ids:
             raise bad_request("存在无效标签")
-    current_rows = list(
-        (
-            await db.scalars(select(ImageTag).where(ImageTag.image_id == image_id))
-        ).all()
-    )
+    current_rows = list((await db.scalars(select(ImageTag).where(ImageTag.image_id == image_id))).all())
     current_ids = {row.tag_id for row in current_rows}
     add_ids = next_ids - current_ids
     remove_ids = current_ids - next_ids
@@ -150,11 +162,7 @@ async def _sync_tags(
     for tag_id in add_ids:
         db.add(ImageTag(image_id=image_id, tag_id=tag_id))
     if add_ids:
-        await db.execute(
-            update(Tag)
-            .where(Tag.id.in_(add_ids))
-            .values(usage_count=Tag.usage_count + 1)
-        )
+        await db.execute(update(Tag).where(Tag.id.in_(add_ids)).values(usage_count=Tag.usage_count + 1))
     if remove_ids:
         await db.execute(
             update(Tag)
@@ -167,12 +175,12 @@ async def _load_context(
     db: AsyncSession,
     images: list[Image],
 ) -> tuple[dict[int, Category], dict[int, list[Tag]]]:
+    """批量加载分类和完整标签，供列表/详情复用并避免 N+1 查询。"""
+
     category_ids = {image.category_id for image in images if image.category_id}
     category_map: dict[int, Category] = {}
     if category_ids:
-        categories = list(
-            (await db.scalars(select(Category).where(Category.id.in_(category_ids)))).all()
-        )
+        categories = list((await db.scalars(select(Category).where(Category.id.in_(category_ids)))).all())
         category_map = {category.id: category for category in categories}
     tags_by_image: dict[int, list[Tag]] = {image.id: [] for image in images}
     image_ids = [image.id for image in images]
@@ -196,6 +204,8 @@ def _serialize_image(
     category: Category | None,
     tags: list[Tag],
 ) -> dict:
+    """输出管理端 ``AdminImage`` 所需字段及公开图库的公共字段。"""
+
     return {
         "id": image.id,
         "title": image.title,
@@ -203,13 +213,8 @@ def _serialize_image(
         "image_url": normalize_image_url(image.image_url),
         "thumbnail_url": image_thumbnail_url(image),
         "aspect_ratio": image.aspect_ratio,
-        "category": (
-            {"id": category.id, "name": category.name} if category else None
-        ),
-        "tags": [
-            {"id": tag.id, "name": tag.name, "color": tag.color}
-            for tag in tags
-        ],
+        "category": ({"id": category.id, "name": category.name} if category else None),
+        "tags": [{"id": tag.id, "name": tag.name, "color": tag.color} for tag in tags],
         "view_count": image.view_count,
         "download_count": image.download_count,
         "favorite_count": image.favorite_count,
@@ -223,6 +228,8 @@ def _serialize_image(
 
 
 async def get_image(db: AsyncSession, image_id: int) -> dict:
+    """读取任意状态图片详情；管理端允许查看已软删除记录。"""
+
     image = await db.scalar(select(Image).where(Image.id == image_id))
     if not image:
         raise not_found("图片不存在")
@@ -245,12 +252,12 @@ async def list_images(
     tag_id: int | None,
     sort: str | None,
 ) -> dict:
+    """按关键字、分类、标签、状态和排序规则分页查询管理端图片。"""
+
     page, page_size, offset = normalize_pagination(page, page_size)
     conditions = []
     if status == "deleted":
-        conditions.append(
-            or_(Image.status == "deleted", Image.deleted_at.is_not(None))
-        )
+        conditions.append(or_(Image.status == "deleted", Image.deleted_at.is_not(None)))
     else:
         conditions.append(Image.deleted_at.is_(None))
         if status:
@@ -272,9 +279,7 @@ async def list_images(
             )
         )
     if tag_id:
-        conditions.append(
-            Image.id.in_(select(ImageTag.image_id).where(ImageTag.tag_id == tag_id))
-        )
+        conditions.append(Image.id.in_(select(ImageTag.image_id).where(ImageTag.tag_id == tag_id)))
     order_map = {
         "latest": (Image.created_at.desc(),),
         "views": (Image.view_count.desc(), Image.created_at.desc()),
@@ -283,17 +288,11 @@ async def list_images(
         "weight": (Image.display_weight.desc(), Image.created_at.desc()),
     }
     order_by = order_map.get(sort or "", order_map["latest"])
-    total = await db.scalar(
-        select(func.count()).select_from(Image).where(*conditions)
-    ) or 0
+    total = await db.scalar(select(func.count()).select_from(Image).where(*conditions)) or 0
     images = list(
         (
             await db.scalars(
-                select(Image)
-                .where(*conditions)
-                .order_by(*order_by)
-                .offset(offset)
-                .limit(page_size)
+                select(Image).where(*conditions).order_by(*order_by).offset(offset).limit(page_size)
             )
         ).all()
     )
@@ -322,6 +321,8 @@ async def create_image(
     payload: dict,
     ip_address: str | None,
 ) -> dict:
+    """创建图片元数据、同步标签及审计日志，并在一个事务内提交。"""
+
     title = str(payload.get("title") or "").strip()
     image_url = str(payload.get("image_url") or "").strip()
     if not title:
@@ -368,6 +369,8 @@ async def update_image(
     payload: dict,
     ip_address: str | None,
 ) -> dict:
+    """局部修改图片和标签；未包含的字段保持不变。"""
+
     image = await db.scalar(select(Image).where(Image.id == image_id))
     if not image:
         raise not_found("图片不存在")
@@ -422,6 +425,8 @@ async def change_status(
     status: str,
     ip_address: str | None,
 ) -> dict:
+    """修改图片可见状态；切换 deleted 时同步维护软删除时间。"""
+
     if status not in ALLOWED_STATUSES:
         raise bad_request("图片状态只能是 public、private、draft、deleted")
     image = await db.scalar(select(Image).where(Image.id == image_id))
@@ -450,6 +455,8 @@ async def delete_image(
     image_id: int,
     ip_address: str | None,
 ) -> dict:
+    """软删除图片，保留行为记录和文件，便于后台恢复。"""
+
     image = await db.scalar(select(Image).where(Image.id == image_id))
     if not image:
         raise not_found("图片不存在")
@@ -477,6 +484,8 @@ async def restore_image(
     status: str,
     ip_address: str | None,
 ) -> dict:
+    """清除软删除标记，并恢复为指定的非 deleted 状态。"""
+
     if status not in {"draft", "private", "public"}:
         raise bad_request("恢复后的状态只能是 draft、private、public")
     image = await db.scalar(select(Image).where(Image.id == image_id))

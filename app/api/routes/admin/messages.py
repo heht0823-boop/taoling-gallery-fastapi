@@ -1,3 +1,5 @@
+"""管理后台留言审核列表、详情、回复与屏蔽路由。"""
+
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +14,8 @@ router = APIRouter(prefix="/admin", tags=["admin-messages"])
 
 
 def _client_ip(request: Request) -> str | None:
+    """提取管理员 IP 写入审计记录。"""
+
     return request.client.host if request.client else None
 
 
@@ -26,6 +30,8 @@ async def messages(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
+    """保留 ``parent_id`` 是否显式传入的信息，区分顶层筛选与不筛选。"""
+
     return api_response(
         await message_service.list_messages(
             db,
@@ -45,6 +51,8 @@ async def message_detail(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
+    """读取留言及全部回复详情。"""
+
     return api_response(await message_service.get_message(db, message_id))
 
 
@@ -56,6 +64,8 @@ async def reply_message(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    """创建一条管理员回复并返回 201。"""
+
     return created(
         await message_service.reply_message(
             db,
@@ -76,6 +86,8 @@ async def block_message(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    """将留言审核状态改为 block。"""
+
     return api_response(
         await message_service.block_message(
             db,

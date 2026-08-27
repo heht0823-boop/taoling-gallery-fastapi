@@ -1,3 +1,9 @@
+"""收藏、下载和浏览行为的请求 Schema。
+
+``AliasChoices`` 同时接受 Node/Vue 历史字段和当前 snake_case 字段，序列化输出
+仍由业务服务固定，防止迁移期间前端调用失效。
+"""
+
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 

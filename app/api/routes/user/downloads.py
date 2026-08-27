@@ -1,3 +1,9 @@
+"""登录用户的下载历史路由。
+
+除 ``/user/downloads`` 外还保留前端曾使用的创建别名，底层均复用同一服务，
+避免两个 URL 在统计计数和响应字段上发生偏差。
+"""
+
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +24,8 @@ async def downloads(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
+    """分页返回当前用户未软删除的下载历史。"""
+
     return api_response(
         await download_service.list_downloads(
             db,
@@ -35,6 +43,8 @@ async def create_download_alias(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
+    """保留 ``/user/downloads/{image_id}`` 创建别名。"""
+
     return created(
         await download_service.create_download(
             db,
@@ -53,6 +63,8 @@ async def delete_download(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
+    """软删除当前用户的一条下载历史。"""
+
     return api_response(
         await download_service.delete_download(
             db,
@@ -70,6 +82,8 @@ async def clear_downloads(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
+    """幂等清空当前用户全部可见下载历史。"""
+
     return api_response(
         await download_service.clear_downloads(
             db,

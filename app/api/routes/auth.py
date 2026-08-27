@@ -1,3 +1,9 @@
+"""注册、登录、退出与当前用户路由。
+
+响应统一包裹为 ``{code, message, data}``，身份令牌沿用 Node 服务的
+``taoling_auth`` HttpOnly Cookie，使现有 Vue 鉴权逻辑无需改字段。
+"""
+
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,11 +20,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register")
-async def register(
-    payload: RegisterIn,
-    request: Request,
-    db: AsyncSession = Depends(get_db)
-):
+async def register(payload: RegisterIn, request: Request, db: AsyncSession = Depends(get_db)):
     """
     用户注册接口
     完整访问路径 POST /api/auth/register
@@ -45,11 +47,7 @@ async def register(
 
 
 @router.post("/login")
-async def login(
-    payload: LoginIn,
-    request: Request,
-    db: AsyncSession = Depends(get_db)
-):
+async def login(payload: LoginIn, request: Request, db: AsyncSession = Depends(get_db)):
     """
     用户登录接口，支持用户名/邮箱登录
     完整访问路径 POST /api/auth/login
@@ -112,6 +110,4 @@ async def me(
     :param current_user: 强制登录产出当前登录用户ORM对象
     :return: 用户信息与统计数据
     """
-    return api_response(
-        await auth_service.get_user_with_stats(db, current_user.id)
-    )
+    return api_response(await auth_service.get_user_with_stats(db, current_user.id))

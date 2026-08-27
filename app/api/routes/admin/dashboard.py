@@ -1,3 +1,5 @@
+"""管理后台总览统计与管理员操作日志查询路由。"""
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +17,8 @@ async def dashboard_stats(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
+    """返回管理首页六项固定统计指标。"""
+
     return api_response(await dashboard_service.dashboard_stats(db))
 
 
@@ -27,6 +31,8 @@ async def logs(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
+    """按行为类型和目标类型筛选管理员日志。"""
+
     return api_response(
         await dashboard_service.list_logs(
             db,

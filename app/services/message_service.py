@@ -1,3 +1,9 @@
+"""公开留言板、我的留言与内容审核业务。
+
+公开列表只装配一层回复以匹配 Vue 结构；新留言先落为待审状态，再将审核结果与
+记录统一提交，外部响应不泄漏供应商原始审核数据。
+"""
+
 from collections import defaultdict
 
 from sqlalchemy import func, select
@@ -50,19 +56,13 @@ async def list_board(
 ) -> dict:
     """分页返回公开审核通过的留言，并一次性装配一层回复。"""
     page, page_size, offset = normalize_pagination(page, page_size)
-    parent_condition = (
-        UserMessage.parent_id == parent_id
-        if parent_id
-        else UserMessage.parent_id.is_(None)
-    )
+    parent_condition = UserMessage.parent_id == parent_id if parent_id else UserMessage.parent_id.is_(None)
     conditions = [
         UserMessage.check_status == "success",
         UserMessage.deleted_at.is_(None),
         parent_condition,
     ]
-    total = await db.scalar(
-        select(func.count()).select_from(UserMessage).where(*conditions)
-    ) or 0
+    total = await db.scalar(select(func.count()).select_from(UserMessage).where(*conditions)) or 0
     rows = (
         await db.execute(
             select(UserMessage, User)
@@ -89,9 +89,7 @@ async def list_board(
             )
         ).all()
         for reply, reply_user in reply_rows:
-            replies_by_parent[reply.parent_id].append(
-                serialize_public_message(reply, reply_user)
-            )
+            replies_by_parent[reply.parent_id].append(serialize_public_message(reply, reply_user))
     return {
         "list": [
             serialize_public_message(
@@ -123,9 +121,7 @@ async def list_mine(
         UserMessage.check_status == "success",
         UserMessage.deleted_at.is_(None),
     ]
-    total = await db.scalar(
-        select(func.count()).select_from(UserMessage).where(*conditions)
-    ) or 0
+    total = await db.scalar(select(func.count()).select_from(UserMessage).where(*conditions)) or 0
     rows = (
         await db.execute(
             select(UserMessage, User)

@@ -1,3 +1,9 @@
+"""图片下载历史与累计计数事务。
+
+下载记录保存标题和地址快照，之后即使图片资料变化，历史页面仍能展示当时内容；
+删除历史使用软删除且不会回退累计业务计数。
+"""
+
 from datetime import datetime
 
 from sqlalchemy import func, select
@@ -26,11 +32,7 @@ async def create_download(
         error_message="图片不存在或暂未公开，无法下载",
         for_update=True,
     )
-    stats = await db.scalar(
-        select(UserStat)
-        .where(UserStat.user_id == user.id)
-        .with_for_update()
-    )
+    stats = await db.scalar(select(UserStat).where(UserStat.user_id == user.id).with_for_update())
     download_url = normalize_image_url(image.image_url)
     db.add(
         DownloadRecord(
@@ -74,9 +76,7 @@ async def list_downloads(
         DownloadRecord.user_id == user_id,
         DownloadRecord.deleted_at.is_(None),
     ]
-    total = await db.scalar(
-        select(func.count()).select_from(DownloadRecord).where(*conditions)
-    ) or 0
+    total = await db.scalar(select(func.count()).select_from(DownloadRecord).where(*conditions)) or 0
     records = (
         await db.scalars(
             select(DownloadRecord)

@@ -1,3 +1,5 @@
+"""管理后台分类分页、创建、修改和安全删除路由。"""
+
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +14,8 @@ router = APIRouter(prefix="/admin", tags=["admin-categories"])
 
 
 def _client_ip(request: Request) -> str | None:
+    """安全读取客户端 IP，供管理员审计日志记录。"""
+
     return request.client.host if request.client else None
 
 
@@ -24,6 +28,8 @@ async def categories(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
+    """分页查询分类及有效图片引用数。"""
+
     return api_response(
         await taxonomy_service.list_categories(
             db,
@@ -42,6 +48,8 @@ async def create_category(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    """创建分类并返回 201。"""
+
     return created(
         await taxonomy_service.create_category(
             db,
@@ -64,6 +72,8 @@ async def update_category(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    """兼容 PUT/PATCH 局部更新分类。"""
+
     return api_response(
         await taxonomy_service.update_category(
             db,
@@ -83,6 +93,8 @@ async def delete_category(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    """在无图片引用时软删除分类。"""
+
     return api_response(
         await taxonomy_service.delete_category(
             db,

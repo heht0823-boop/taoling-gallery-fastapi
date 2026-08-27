@@ -1,3 +1,9 @@
+"""头像上传、远程下载、安全校验与展示变体生成。
+
+所有本地路径都限制在上传根目录内；远程地址会拒绝私网目标，源图通过 Pillow
+解码后再生成固定尺寸 WebP，避免仅凭扩展名信任用户输入。
+"""
+
 import asyncio
 import ipaddress
 import socket
@@ -66,9 +72,7 @@ async def _write_chunks(
             async for chunk in chunks:
                 size += len(chunk)
                 if size > max_size:
-                    raise bad_request(
-                        f"头像文件不能超过 {settings.upload_max_size_mb}MB"
-                    )
+                    raise bad_request(f"头像文件不能超过 {settings.upload_max_size_mb}MB")
                 output.write(chunk)
         if size == 0:
             raise bad_request("头像文件不能为空")
@@ -127,9 +131,7 @@ async def _download_remote_avatar(url: str) -> Path:
                         continue
                     if not response.is_success:
                         raise bad_request("头像外链下载失败，请更换后重试")
-                    content_type = response.headers.get("content-type", "").split(
-                        ";", maxsplit=1
-                    )[0]
+                    content_type = response.headers.get("content-type", "").split(";", maxsplit=1)[0]
                     return await _write_chunks(
                         response.aiter_bytes(),
                         content_type=content_type,

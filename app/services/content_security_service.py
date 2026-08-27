@@ -1,3 +1,9 @@
+"""阿里云文本内容安全适配器。
+
+签名、请求和不同版本响应在本模块内归一化，留言服务只依赖 ``passed`` 等稳定
+业务字段；未开启审核时明确返回开发环境放行结果。
+"""
+
 import base64
 import hashlib
 import hmac
@@ -26,13 +32,7 @@ def normalize_result(raw: dict) -> dict:
             data = {}
     if not isinstance(data, dict):
         data = {}
-    results = (
-        data.get("Result")
-        or data.get("result")
-        or data.get("Results")
-        or data.get("results")
-        or []
-    )
+    results = data.get("Result") or data.get("result") or data.get("Results") or data.get("results") or []
     first_result = results[0] if isinstance(results, list) and results else {}
     if not isinstance(first_result, dict):
         first_result = {}
@@ -60,9 +60,7 @@ def normalize_result(raw: dict) -> dict:
         score = float(score_value)
     except (TypeError, ValueError):
         score = 0.0
-    blocked = bool(
-        normalized_labels.intersection({"block", "high", "deny", "review"})
-    ) or score >= 80
+    blocked = bool(normalized_labels.intersection({"block", "high", "deny", "review"})) or score >= 80
     return {
         "passed": not blocked,
         "status": "block" if blocked else "success",
@@ -92,8 +90,7 @@ async def _request_aliyun(service_parameters: dict) -> dict:
         ),
     }
     canonicalized = "&".join(
-        f"{_percent_encode(key)}={_percent_encode(params[key])}"
-        for key in sorted(params)
+        f"{_percent_encode(key)}={_percent_encode(params[key])}" for key in sorted(params)
     )
     string_to_sign = f"POST&{_percent_encode('/')}&{_percent_encode(canonicalized)}"
     signature = base64.b64encode(
@@ -117,9 +114,7 @@ async def _request_aliyun(service_parameters: dict) -> dict:
         raise bad_request("阿里云内容安全审核失败") from exc
     if not isinstance(payload, dict):
         raise bad_request("阿里云内容安全审核响应格式错误")
-    if response.is_error or (
-        payload.get("Code") and str(payload.get("Code")) != "200"
-    ):
+    if response.is_error or (payload.get("Code") and str(payload.get("Code")) != "200"):
         raise bad_request(
             payload.get("Message")
             or payload.get("Msg")

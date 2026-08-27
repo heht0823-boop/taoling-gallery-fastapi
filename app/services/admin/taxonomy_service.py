@@ -1,3 +1,9 @@
+"""管理后台分类与标签 CRUD、引用保护和审计事务。
+
+分类/标签采用软删除；仍被有效图片引用时拒绝删除，避免公开图库出现孤立关联。
+数据库唯一约束作为并发兜底，冲突统一转换为 409。
+"""
+
 from datetime import datetime
 
 from sqlalchemy import func, select
@@ -12,6 +18,8 @@ from app.utils.pagination import normalize_pagination, pagination_payload
 
 
 def _serialize_category(category: Category, *, image_count: int = 0) -> dict:
+    """输出分类及有效图片引用数。"""
+
     return {
         "id": category.id,
         "name": category.name,
@@ -25,6 +33,8 @@ def _serialize_category(category: Category, *, image_count: int = 0) -> dict:
 
 
 def _serialize_tag(tag: Tag) -> dict:
+    """输出标签及持久化的引用计数。"""
+
     return {
         "id": tag.id,
         "name": tag.name,
@@ -45,6 +55,8 @@ async def list_categories(
     keyword: str | None,
     status: str | None,
 ) -> dict:
+    """分页查询未删除分类，并在一条聚合子查询中统计图片数。"""
+
     page, page_size, offset = normalize_pagination(page, page_size)
     conditions = [Category.deleted_at.is_(None)]
     if keyword and (value := keyword.strip()):
@@ -58,9 +70,7 @@ async def list_categories(
         .group_by(Image.category_id)
         .subquery()
     )
-    total = await db.scalar(
-        select(func.count()).select_from(Category).where(*conditions)
-    ) or 0
+    total = await db.scalar(select(func.count()).select_from(Category).where(*conditions)) or 0
     rows = (
         await db.execute(
             select(
@@ -75,10 +85,7 @@ async def list_categories(
         )
     ).all()
     return {
-        "list": [
-            _serialize_category(category, image_count=image_count)
-            for category, image_count in rows
-        ],
+        "list": [_serialize_category(category, image_count=image_count) for category, image_count in rows],
         "pagination": pagination_payload(
             page=page,
             page_size=page_size,
@@ -88,6 +95,8 @@ async def list_categories(
 
 
 async def _active_category(db: AsyncSession, category_id: int) -> Category:
+    """读取有效分类，隐藏已软删除记录。"""
+
     category = await db.scalar(
         select(Category).where(
             Category.id == category_id,
@@ -108,6 +117,8 @@ async def create_category(
     status: str,
     ip_address: str | None,
 ) -> dict:
+    """创建唯一分类并记录管理员操作；并发重名统一返回 409。"""
+
     name = name.strip()
     if not name:
         raise bad_request("分类名称不能为空")
@@ -149,6 +160,8 @@ async def update_category(
     updates: dict,
     ip_address: str | None,
 ) -> dict:
+    """局部更新分类并返回更新后的有效图片引用数。"""
+
     category = await _active_category(db, category_id)
     if updates.get("name") is not None:
         name = str(updates["name"]).strip()
@@ -184,15 +197,18 @@ async def update_category(
         await db.rollback()
         raise conflict("分类名称已存在") from exc
     await db.refresh(category)
-    image_count = await db.scalar(
-        select(func.count())
-        .select_from(Image)
-        .where(
-            Image.category_id == category.id,
-            Image.deleted_at.is_(None),
-            Image.status != "deleted",
+    image_count = (
+        await db.scalar(
+            select(func.count())
+            .select_from(Image)
+            .where(
+                Image.category_id == category.id,
+                Image.deleted_at.is_(None),
+                Image.status != "deleted",
+            )
         )
-    ) or 0
+        or 0
+    )
     return _serialize_category(category, image_count=image_count)
 
 
@@ -203,16 +219,21 @@ async def delete_category(
     category_id: int,
     ip_address: str | None,
 ) -> dict:
+    """无有效图片引用时软删除分类，否则返回可操作的 400 提示。"""
+
     category = await _active_category(db, category_id)
-    image_count = await db.scalar(
-        select(func.count())
-        .select_from(Image)
-        .where(
-            Image.category_id == category.id,
-            Image.deleted_at.is_(None),
-            Image.status != "deleted",
+    image_count = (
+        await db.scalar(
+            select(func.count())
+            .select_from(Image)
+            .where(
+                Image.category_id == category.id,
+                Image.deleted_at.is_(None),
+                Image.status != "deleted",
+            )
         )
-    ) or 0
+        or 0
+    )
     if image_count:
         raise bad_request("该分类下仍有图片，请先转移图片后再删除")
     category.deleted_at = datetime.now()
@@ -239,15 +260,15 @@ async def list_tags(
     keyword: str | None,
     status: str | None,
 ) -> dict:
+    """分页查询未删除标签，默认按引用热度和创建时间排序。"""
+
     page, page_size, offset = normalize_pagination(page, page_size)
     conditions = [Tag.deleted_at.is_(None)]
     if keyword and (value := keyword.strip()):
         conditions.append(Tag.name.like(f"%{value}%"))
     if status:
         conditions.append(Tag.status == status)
-    total = await db.scalar(
-        select(func.count()).select_from(Tag).where(*conditions)
-    ) or 0
+    total = await db.scalar(select(func.count()).select_from(Tag).where(*conditions)) or 0
     tags = list(
         (
             await db.scalars(
@@ -270,9 +291,9 @@ async def list_tags(
 
 
 async def _active_tag(db: AsyncSession, tag_id: int) -> Tag:
-    tag = await db.scalar(
-        select(Tag).where(Tag.id == tag_id, Tag.deleted_at.is_(None))
-    )
+    """读取有效标签，隐藏已软删除记录。"""
+
+    tag = await db.scalar(select(Tag).where(Tag.id == tag_id, Tag.deleted_at.is_(None)))
     if not tag:
         raise not_found("标签不存在")
     return tag
@@ -287,12 +308,12 @@ async def create_tag(
     status: str,
     ip_address: str | None,
 ) -> dict:
+    """创建唯一标签并记录管理员审计日志。"""
+
     name = name.strip()
     if not name:
         raise bad_request("标签名称不能为空")
-    duplicate = await db.scalar(
-        select(Tag.id).where(Tag.name == name, Tag.deleted_at.is_(None))
-    )
+    duplicate = await db.scalar(select(Tag.id).where(Tag.name == name, Tag.deleted_at.is_(None)))
     if duplicate:
         raise conflict("标签名称已存在")
     tag = Tag(name=name, color=color or None, status=status)
@@ -325,6 +346,8 @@ async def update_tag(
     updates: dict,
     ip_address: str | None,
 ) -> dict:
+    """局部更新标签名称、颜色或状态，引用计数保持不变。"""
+
     tag = await _active_tag(db, tag_id)
     if updates.get("name") is not None:
         name = str(updates["name"]).strip()
@@ -370,10 +393,10 @@ async def delete_tag(
     tag_id: int,
     ip_address: str | None,
 ) -> dict:
+    """仅允许软删除未被任何图片引用的标签。"""
+
     tag = await _active_tag(db, tag_id)
-    used = await db.scalar(
-        select(func.count()).select_from(ImageTag).where(ImageTag.tag_id == tag.id)
-    ) or 0
+    used = await db.scalar(select(func.count()).select_from(ImageTag).where(ImageTag.tag_id == tag.id)) or 0
     if used:
         raise bad_request("该标签正在被图片使用，请先移除关联后再删除")
     tag.deleted_at = datetime.now()

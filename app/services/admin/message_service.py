@@ -1,3 +1,5 @@
+"""管理后台留言分页、详情、管理员回复与屏蔽业务。"""
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +11,8 @@ from app.utils.pagination import normalize_pagination, pagination_payload
 
 
 def _serialize_admin_message(message: UserMessage, user: User | None) -> dict:
+    """输出管理端需要的审核字段及留言作者名称。"""
+
     return {
         "id": message.id,
         "user_id": message.user_id,
@@ -35,21 +39,19 @@ async def list_messages(
     parent_filter_supplied: bool,
     keyword: str | None,
 ) -> dict:
+    """按审核状态、父留言、正文关键字分页查询未删除留言。"""
+
     page, page_size, offset = normalize_pagination(page, page_size)
     conditions = [UserMessage.deleted_at.is_(None)]
     if check_status:
         conditions.append(UserMessage.check_status == check_status)
     if parent_filter_supplied:
         conditions.append(
-            UserMessage.parent_id == parent_id
-            if parent_id
-            else UserMessage.parent_id.is_(None)
+            UserMessage.parent_id == parent_id if parent_id else UserMessage.parent_id.is_(None)
         )
     if keyword and (value := keyword.strip()):
         conditions.append(UserMessage.content.like(f"%{value}%"))
-    total = await db.scalar(
-        select(func.count()).select_from(UserMessage).where(*conditions)
-    ) or 0
+    total = await db.scalar(select(func.count()).select_from(UserMessage).where(*conditions)) or 0
     rows = (
         await db.execute(
             select(UserMessage, User)
@@ -61,9 +63,7 @@ async def list_messages(
         )
     ).all()
     return {
-        "list": [
-            _serialize_admin_message(message, user) for message, user in rows
-        ],
+        "list": [_serialize_admin_message(message, user) for message, user in rows],
         "pagination": pagination_payload(
             page=page,
             page_size=page_size,
@@ -76,6 +76,8 @@ async def _message_row(
     db: AsyncSession,
     message_id: int,
 ) -> tuple[UserMessage, User | None]:
+    """读取留言及作者；作者被删除时仍允许管理员查看历史留言。"""
+
     row = (
         await db.execute(
             select(UserMessage, User)
@@ -92,6 +94,8 @@ async def _message_row(
 
 
 async def get_message(db: AsyncSession, message_id: int) -> dict:
+    """返回留言详情并按时间正序装配全部未删除回复。"""
+
     message, user = await _message_row(db, message_id)
     reply_rows = (
         await db.execute(
@@ -106,10 +110,7 @@ async def get_message(db: AsyncSession, message_id: int) -> dict:
     ).all()
     return {
         **_serialize_admin_message(message, user),
-        "replies": [
-            _serialize_admin_message(reply, reply_user)
-            for reply, reply_user in reply_rows
-        ],
+        "replies": [_serialize_admin_message(reply, reply_user) for reply, reply_user in reply_rows],
     }
 
 
@@ -122,6 +123,8 @@ async def reply_message(
     ip_address: str | None,
     user_agent: str | None,
 ) -> dict:
+    """创建管理员审核通过的回复，并与审计日志一起提交。"""
+
     content = content.strip()
     if not content:
         raise bad_request("回复内容不能为空")
@@ -160,6 +163,8 @@ async def block_message(
     message_id: int,
     ip_address: str | None,
 ) -> dict:
+    """把留言标记为 block，使其立即从公开和用户列表中隐藏。"""
+
     message, user = await _message_row(db, message_id)
     message.check_status = "block"
     await write_log(

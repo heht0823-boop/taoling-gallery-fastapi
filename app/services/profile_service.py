@@ -1,3 +1,9 @@
+"""个人资料、密码和头像更新事务。
+
+服务层负责标准化、唯一性检查、密码校验及审计日志；头像文件的生成/失败补偿
+由头像服务配合完成，数据库只保存稳定公开 URL。
+"""
+
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,9 +26,7 @@ async def update_profile(
 ) -> dict:
     """更新当前用户资料，完成标准化、查重和审计后统一提交。"""
     allowed_updates = {
-        key: value
-        for key, value in updates.items()
-        if key in {"username", "email", "avatar_url"}
+        key: value for key, value in updates.items() if key in {"username", "email", "avatar_url"}
     }
     if not allowed_updates:
         raise bad_request("请至少提交一个需要修改的资料字段")
@@ -35,9 +39,7 @@ async def update_profile(
     if "email" in allowed_updates:
         allowed_updates["email"] = str(allowed_updates["email"] or "").strip() or None
     if "avatar_url" in allowed_updates:
-        allowed_updates["avatar_url"] = (
-            normalize_image_url(allowed_updates["avatar_url"]) or None
-        )
+        allowed_updates["avatar_url"] = normalize_image_url(allowed_updates["avatar_url"]) or None
 
     duplicate_filters = []
     if allowed_updates.get("username"):
@@ -58,9 +60,7 @@ async def update_profile(
             raise conflict("邮箱已被使用")
 
     user = await db.scalar(
-        select(User)
-        .where(User.id == user_id, User.deleted_at.is_(None))
-        .with_for_update()
+        select(User).where(User.id == user_id, User.deleted_at.is_(None)).with_for_update()
     )
     if not user:
         raise unauthorized("当前登录用户不存在")
@@ -99,9 +99,7 @@ async def update_password(
         raise bad_request("新密码长度不能少于 6 位")
 
     user = await db.scalar(
-        select(User)
-        .where(User.id == user_id, User.deleted_at.is_(None))
-        .with_for_update()
+        select(User).where(User.id == user_id, User.deleted_at.is_(None)).with_for_update()
     )
     if not user:
         raise unauthorized("当前登录用户不存在")
@@ -132,9 +130,7 @@ async def update_avatar(
 ) -> dict:
     """保存头像地址并返回与前端一致的头像处理结果。"""
     user = await db.scalar(
-        select(User)
-        .where(User.id == user_id, User.deleted_at.is_(None))
-        .with_for_update()
+        select(User).where(User.id == user_id, User.deleted_at.is_(None)).with_for_update()
     )
     if not user:
         raise unauthorized("当前登录用户不存在")

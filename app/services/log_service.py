@@ -1,3 +1,8 @@
+"""管理员审计日志写入辅助函数。
+
+本函数只 ``flush`` 不自行提交，让业务数据与对应审计记录共享同一个事务边界。
+"""
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.admin_log import AdminLog

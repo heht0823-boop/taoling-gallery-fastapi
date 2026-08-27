@@ -1,3 +1,5 @@
+"""留言板输入 Schema，兼容前端的父留言字段别名。"""
+
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 

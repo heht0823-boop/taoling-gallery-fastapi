@@ -1,1 +1,1 @@
-"""Administrator-only business services."""
+"""管理后台业务服务；负责事务、软删除保护和管理员审计日志。"""

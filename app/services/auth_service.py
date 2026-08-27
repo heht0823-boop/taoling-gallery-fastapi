@@ -1,3 +1,9 @@
+"""账号注册、登录、退出和用户响应序列化。
+
+服务层负责账号唯一性、密码校验、状态检查及审计日志；Cookie 的具体写入/删除
+留给路由层完成，便于在测试中直接验证业务事务。
+"""
+
 from datetime import datetime
 
 from sqlalchemy import or_, select

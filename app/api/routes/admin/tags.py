@@ -1,3 +1,5 @@
+"""管理后台标签分页、创建、修改和关联保护删除路由。"""
+
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +14,8 @@ router = APIRouter(prefix="/admin", tags=["admin-tags"])
 
 
 def _client_ip(request: Request) -> str | None:
+    """安全提取客户端 IP 供审计日志使用。"""
+
     return request.client.host if request.client else None
 
 
@@ -24,6 +28,8 @@ async def tags(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
+    """分页查询标签及其引用计数。"""
+
     return api_response(
         await taxonomy_service.list_tags(
             db,
@@ -42,6 +48,8 @@ async def create_tag(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    """创建标签并返回 201。"""
+
     return created(
         await taxonomy_service.create_tag(
             db,
@@ -64,6 +72,8 @@ async def update_tag(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    """兼容 PUT/PATCH 局部更新标签。"""
+
     return api_response(
         await taxonomy_service.update_tag(
             db,
@@ -83,6 +93,8 @@ async def delete_tag(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    """在无图片关联时软删除标签。"""
+
     return api_response(
         await taxonomy_service.delete_tag(
             db,

@@ -1,3 +1,5 @@
+"""管理后台总览指标聚合与审计日志分页查询。"""
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +11,8 @@ from app.utils.pagination import normalize_pagination, pagination_payload
 
 
 def _serialize_log(log: AdminLog) -> dict:
+    """输出前端日志表格使用的稳定 snake_case 字段。"""
+
     return {
         "id": log.id,
         "actor_id": log.actor_id,
@@ -25,13 +29,11 @@ def _serialize_log(log: AdminLog) -> dict:
 
 
 async def dashboard_stats(db: AsyncSession) -> dict:
+    """聚合未删除图片、用户、行为计数和有效 AI 会话数。"""
+
     image_conditions = [Image.deleted_at.is_(None), Image.status != "deleted"]
-    image_count = await db.scalar(
-        select(func.count()).select_from(Image).where(*image_conditions)
-    )
-    user_count = await db.scalar(
-        select(func.count()).select_from(User).where(User.deleted_at.is_(None))
-    )
+    image_count = await db.scalar(select(func.count()).select_from(Image).where(*image_conditions))
+    user_count = await db.scalar(select(func.count()).select_from(User).where(User.deleted_at.is_(None)))
     totals = (
         await db.execute(
             select(
@@ -42,9 +44,7 @@ async def dashboard_stats(db: AsyncSession) -> dict:
         )
     ).one()
     conversation_count = await db.scalar(
-        select(func.count())
-        .select_from(AiConversation)
-        .where(AiConversation.deleted_at.is_(None))
+        select(func.count()).select_from(AiConversation).where(AiConversation.deleted_at.is_(None))
     )
     return {
         "image_count": image_count or 0,
@@ -64,15 +64,15 @@ async def list_logs(
     action_type: str | None,
     target_type: str | None,
 ) -> dict:
+    """按行为/目标类型筛选日志并返回标准分页结构。"""
+
     page, page_size, offset = normalize_pagination(page, page_size)
     conditions = []
     if action_type:
         conditions.append(AdminLog.action_type == action_type)
     if target_type:
         conditions.append(AdminLog.target_type == target_type)
-    total = await db.scalar(
-        select(func.count()).select_from(AdminLog).where(*conditions)
-    ) or 0
+    total = await db.scalar(select(func.count()).select_from(AdminLog).where(*conditions)) or 0
     logs = list(
         (
             await db.scalars(

@@ -1,3 +1,5 @@
+"""图片浏览明细与累计浏览数事务。"""
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,11 +27,7 @@ async def record_view(
 
     stats = None
     if user_id:
-        stats = await db.scalar(
-            select(UserStat)
-            .where(UserStat.user_id == user_id)
-            .with_for_update()
-        )
+        stats = await db.scalar(select(UserStat).where(UserStat.user_id == user_id).with_for_update())
 
     db.add(
         ImageViewRecord(

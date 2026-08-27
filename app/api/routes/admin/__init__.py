@@ -1,1 +1,1 @@
-"""Administrator API routes."""
+"""管理后台路由包；包内所有接口都通过 ``require_admin`` 强制管理员身份。"""

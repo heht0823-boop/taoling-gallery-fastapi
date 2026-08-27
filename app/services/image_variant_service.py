@@ -1,3 +1,9 @@
+"""本地上传图片的缩略图参数清洗与缓存文件生成。
+
+URL 到路径的转换强制限制在上传根目录，宽度、质量和格式均使用白名单/边界值，
+生成工作在线程中执行以避免阻塞 FastAPI 事件循环。
+"""
+
 import asyncio
 import re
 from pathlib import Path
@@ -98,11 +104,15 @@ async def ensure_variant(
     safe_width = sanitize_width(width, settings.image_thumbnail_width)
     safe_format = sanitize_format(image_format)
     safe_quality = sanitize_quality(quality)
-    target = settings.upload_path / "variants" / _variant_filename(
-        source,
-        width=safe_width,
-        image_format=safe_format,
-        quality=safe_quality,
+    target = (
+        settings.upload_path
+        / "variants"
+        / _variant_filename(
+            source,
+            width=safe_width,
+            image_format=safe_format,
+            quality=safe_quality,
+        )
     )
 
     if not target.is_file():

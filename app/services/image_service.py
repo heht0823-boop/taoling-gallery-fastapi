@@ -1,3 +1,9 @@
+"""公开图库查询、详情装配、相关推荐与缩略图解析。
+
+所有公开响应由同一序列化函数生成，保证列表、详情、相关推荐中的分类、标签、
+计数和 URL 字段完全一致，并通过批量上下文查询避免 N+1。
+"""
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -102,10 +108,7 @@ def serialize_image(
         "thumbnail_url": image_thumbnail_url(image),
         "aspect_ratio": image.aspect_ratio,
         "category": {"id": category.id, "name": category.name} if category else None,
-        "tags": [
-            {"id": tag.id, "name": tag.name, "color": tag.color}
-            for tag in tags
-        ],
+        "tags": [{"id": tag.id, "name": tag.name, "color": tag.color} for tag in tags],
         "view_count": image.view_count,
         "download_count": image.download_count,
         "favorite_count": image.favorite_count,
@@ -197,11 +200,7 @@ async def list_images(
 
     safe_tag_ids = sorted({tag_id for tag_id in tag_ids or [] if tag_id > 0})
     if safe_tag_ids:
-        conditions.append(
-            Image.id.in_(
-                select(ImageTag.image_id).where(ImageTag.tag_id.in_(safe_tag_ids))
-            )
-        )
+        conditions.append(Image.id.in_(select(ImageTag.image_id).where(ImageTag.tag_id.in_(safe_tag_ids))))
 
     if aspect_ratio and (ratio := aspect_ratio.strip()):
         conditions.append(Image.aspect_ratio == ratio)
@@ -215,17 +214,11 @@ async def list_images(
     }
     order_by = order_map.get(sort or "", order_map["weight"])
 
-    total = await db.scalar(
-        select(func.count()).select_from(
-            select(Image.id).where(*conditions).subquery()
-        )
-    ) or 0
+    total = (
+        await db.scalar(select(func.count()).select_from(select(Image.id).where(*conditions).subquery())) or 0
+    )
     rows = await db.execute(
-        select(Image)
-        .where(*conditions)
-        .order_by(*order_by)
-        .offset(offset)
-        .limit(page_size)
+        select(Image).where(*conditions).order_by(*order_by).offset(offset).limit(page_size)
     )
     images = list(rows.scalars().all())
     category_map, tags_by_image, favorite_ids = await _load_image_context(

@@ -1,3 +1,5 @@
+"""管理后台用户查询、状态控制与软删除路由。"""
+
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +14,8 @@ router = APIRouter(prefix="/admin", tags=["admin-users"])
 
 
 def _client_ip(request: Request) -> str | None:
+    """安全提取客户端 IP 供审计日志使用。"""
+
     return request.client.host if request.client else None
 
 
@@ -25,6 +29,8 @@ async def users(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
+    """分页筛选未删除用户。"""
+
     return api_response(
         await user_service.list_users(
             db,
@@ -43,6 +49,8 @@ async def user_detail(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
+    """返回用户资料及完整统计。"""
+
     return api_response(await user_service.get_user(db, user_id))
 
 
@@ -54,6 +62,8 @@ async def update_user_status(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    """启用或禁用指定用户。"""
+
     return api_response(
         await user_service.update_user_status(
             db,
@@ -73,6 +83,8 @@ async def delete_user(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    """软删除指定用户。"""
+
     return api_response(
         await user_service.delete_user(
             db,

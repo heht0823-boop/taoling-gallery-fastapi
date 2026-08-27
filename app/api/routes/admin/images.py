@@ -1,3 +1,9 @@
+"""管理后台图片文件、元数据、状态、软删除和恢复路由。
+
+列表同时接受 ``category_id/categoryId`` 与 ``tag_id/tagId``，兼容 Node 文档和
+前端历史代码；响应只保留统一 snake_case 业务字段。
+"""
+
 from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +23,8 @@ router = APIRouter(prefix="/admin", tags=["admin-images"])
 
 
 def _client_ip(request: Request) -> str | None:
+    """读取管理员来源 IP；测试或无连接上下文时允许为空。"""
+
     return request.client.host if request.client else None
 
 
@@ -25,6 +33,8 @@ async def upload_image_file(
     file: UploadFile = File(...),
     _: User = Depends(require_admin),
 ):
+    """上传并验证源图片，返回源图和两档变体 URL。"""
+
     return created(await image_service.upload_image(file), "图片上传成功")
 
 
@@ -35,6 +45,8 @@ async def create_image(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    """创建图片元数据与标签关系。"""
+
     return created(
         await image_service.create_image(
             db,
@@ -68,15 +80,15 @@ async def images(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
+    """分页查询含草稿、私有和已软删除状态在内的后台图片。"""
+
     return api_response(
         await image_service.list_images(
             db,
             page=page,
             page_size=page_size,
             keyword=keyword,
-            category_id=(
-                category_id if category_id is not None else category_id_camel
-            ),
+            category_id=(category_id if category_id is not None else category_id_camel),
             status=status,
             tag_id=tag_id if tag_id is not None else tag_id_camel,
             sort=sort,
@@ -90,6 +102,8 @@ async def image_detail(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
+    """读取管理端图片详情，包括软删除状态和 tag_ids。"""
+
     return api_response(await image_service.get_image(db, image_id))
 
 
@@ -102,6 +116,8 @@ async def update_image(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    """兼容 PUT/PATCH 局部修改图片元数据。"""
+
     return api_response(
         await image_service.update_image(
             db,
@@ -122,6 +138,8 @@ async def update_image_status(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    """单独修改图片可见状态。"""
+
     return api_response(
         await image_service.change_status(
             db,
@@ -141,6 +159,8 @@ async def delete_image(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    """软删除图片。"""
+
     return api_response(
         await image_service.delete_image(
             db,
@@ -160,6 +180,8 @@ async def restore_image(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    """恢复已软删除图片到指定状态。"""
+
     return api_response(
         await image_service.restore_image(
             db,

@@ -1,3 +1,9 @@
+"""当前用户留言查询与创建路由。
+
+普通用户只能读取本人审核通过的未删除留言；创建接口不会把内容安全审核的
+内部结论直接暴露给客户端，保持原 Node 响应契约。
+"""
+
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +24,8 @@ async def messages(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
+    """分页读取当前用户审核通过且未删除的留言。"""
+
     return api_response(
         await message_service.list_mine(
             db,
@@ -35,6 +43,8 @@ async def create_message(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
+    """创建待审留言并返回不泄漏审核细节的公开字段。"""
+
     return created(
         await message_service.create_message(
             db,

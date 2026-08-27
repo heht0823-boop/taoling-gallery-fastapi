@@ -1,3 +1,8 @@
+"""个人资料、远程头像与密码修改请求 Schema。
+
+字段别名覆盖 Vue 与旧 Node 控制器使用的两套命名，服务层接收后统一标准化。
+"""
+
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
