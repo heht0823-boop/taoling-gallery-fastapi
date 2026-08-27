@@ -1,8 +1,9 @@
 """真实应用入口的路由与跨域契约测试。"""
 
+from app.api.router import API_PREFIX, API_ROUTERS
 from app.main import app
 
-# 来自 taoling-project/main 的 Express 路由；AI 模块在独立功能提交中加入。
+# 来自 taoling-project/main 的 Express 路由，包括 AI 双前缀兼容路径。
 NODE_ROUTE_SUBSET = {
     ("post", "/api/auth/register"),
     ("post", "/api/auth/login"),
@@ -35,6 +36,18 @@ NODE_ROUTE_SUBSET = {
     ("delete", "/api/user/downloads"),
     ("get", "/api/user/messages"),
     ("post", "/api/user/messages"),
+    ("post", "/api/ai/chat"),
+    ("post", "/api/ai/conversations"),
+    ("get", "/api/ai/conversations"),
+    ("get", "/api/ai/conversations/{conversation_id}/messages"),
+    ("delete", "/api/ai/conversations/{conversation_id}"),
+    ("delete", "/api/ai/conversations"),
+    ("post", "/api/user/ai/chat"),
+    ("post", "/api/user/ai/conversations"),
+    ("get", "/api/user/ai/conversations"),
+    ("get", "/api/user/ai/conversations/{conversation_id}/messages"),
+    ("delete", "/api/user/ai/conversations/{conversation_id}"),
+    ("delete", "/api/user/ai/conversations"),
     ("get", "/api/weather/live"),
     ("get", "/api/weather/live/batch"),
     ("get", "/api/weather/forecast"),
@@ -73,8 +86,8 @@ NODE_ROUTE_SUBSET = {
 }
 
 
-def test_openapi_contains_all_completed_node_routes():
-    """真实应用 OpenAPI 必须包含已完成的全部 Node 对照路由。"""
+def test_openapi_exactly_matches_node_routes():
+    """真实应用 OpenAPI 的业务方法与路径必须和 Node 对照清单完全一致。"""
 
     schema = app.openapi()
     actual = {
@@ -83,15 +96,17 @@ def test_openapi_contains_all_completed_node_routes():
         for method in operations
         if method in {"get", "post", "put", "patch", "delete"}
     }
-    assert NODE_ROUTE_SUBSET <= actual
+    actual = {item for item in actual if item[1].startswith(API_PREFIX)}
+    assert actual == NODE_ROUTE_SUBSET
 
 
 def test_application_has_no_duplicate_method_path_pairs():
-    """集中注册清单不能重复挂载同一请求方法和路径。"""
+    """全部叶子路由不能重复声明同一请求方法和最终路径。"""
 
     route_keys = [
-        (method, route.path)
-        for route in app.routes
+        (method, f"{API_PREFIX}{route.path}")
+        for router in API_ROUTERS
+        for route in router.routes
         for method in getattr(route, "methods", set())
         if method not in {"HEAD", "OPTIONS"}
     ]

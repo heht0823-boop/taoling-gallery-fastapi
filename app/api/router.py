@@ -15,6 +15,7 @@ from app.api.routes.admin.tags import router as admin_tags_router
 from app.api.routes.admin.users import router as admin_users_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.public import router as public_router
+from app.api.routes.user.ai import router as ai_router
 from app.api.routes.user.downloads import router as user_downloads_router
 from app.api.routes.user.favorites import router as user_favorites_router
 from app.api.routes.user.messages import router as user_messages_router
@@ -31,6 +32,7 @@ API_ROUTERS: tuple[APIRouter, ...] = (
     user_favorites_router,
     user_downloads_router,
     user_messages_router,
+    ai_router,
     weather_router,
     admin_dashboard_router,
     admin_images_router,
