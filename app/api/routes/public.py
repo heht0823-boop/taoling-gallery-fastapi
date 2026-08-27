@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,7 +6,8 @@ from app.api.deps import optional_current_user
 from app.core.database import get_db
 from app.core.response import api_response
 from app.models.user import User
-from app.services import image_service
+from app.schemas.behavior import ImageViewIn
+from app.services import image_service, view_service
 
 router = APIRouter(tags=["public"])
 
@@ -133,6 +134,27 @@ async def image_detail(
             image_id=image_id,
             current_user_id=current_user.id if current_user else None,
         )
+    )
+
+
+@router.post("/images/{image_id}/view")
+async def create_image_view(
+    image_id: int,
+    payload: ImageViewIn,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User | None = Depends(optional_current_user),
+):
+    return api_response(
+        await view_service.record_view(
+            db,
+            image_id=image_id,
+            user_id=current_user.id if current_user else None,
+            visitor_id=payload.visitor_id,
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+        ),
+        "浏览记录已保存",
     )
 
 

@@ -1,15 +1,22 @@
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import SessionLocal
+from app.core.database import engine
 from app.models.image import Category, Image, ImageTag, Tag
+from app.models.user import User, UserStat
 
 
 @pytest.fixture
 async def gallery_records():
-    async with SessionLocal() as db:
-        transaction = await db.begin()
+    async with engine.connect() as connection:
+        transaction = await connection.begin()
+        db = AsyncSession(
+            bind=connection,
+            expire_on_commit=False,
+            join_transaction_mode="create_savepoint",
+        )
         suffix = uuid4().hex[:10]
         category = Category(name=f"测试分类-{suffix}", sort_order=999, status="normal")
         matching_tag = Tag(
@@ -63,4 +70,24 @@ async def gallery_records():
         try:
             yield db, public_image, private_image, related_image, matching_tag
         finally:
+            await db.close()
             await transaction.rollback()
+
+
+@pytest.fixture
+async def behavior_records(gallery_records):
+    db, public_image, private_image, related_image, matching_tag = gallery_records
+    suffix = uuid4().hex[:10]
+    user = User(
+        username=f"behavior-{suffix}",
+        email=f"behavior-{suffix}@example.test",
+        password_hash="test-only",
+        role="user",
+        status="normal",
+    )
+    db.add(user)
+    await db.flush()
+    stats = UserStat(user_id=user.id)
+    db.add(stats)
+    await db.flush()
+    return db, user, stats, public_image, private_image, related_image, matching_tag
