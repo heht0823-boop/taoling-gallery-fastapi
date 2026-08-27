@@ -36,4 +36,5 @@ def pagination_payload(*, page: int, page_size: int, total: int) -> dict:
         "page": page,
         "pageSize": page_size,
         "total": total,
+        "totalPages": (total + page_size - 1) // page_size,
     }
