@@ -1,0 +1,64 @@
+from fastapi import APIRouter, Depends, Query, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import require_user
+from app.core.database import get_db
+from app.core.response import api_response, created
+from app.models.user import User
+from app.schemas.behavior import ImageIdIn
+from app.services import favorite_service
+
+router = APIRouter(prefix="/user", tags=["user-favorites"])
+
+
+@router.get("/favorites")
+async def favorites(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=12, alias="pageSize", ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    return api_response(
+        await favorite_service.list_favorites(
+            db,
+            user_id=current_user.id,
+            page=page,
+            page_size=page_size,
+        )
+    )
+
+
+@router.post("/favorites")
+async def add_favorite_alias(
+    payload: ImageIdIn,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    return created(
+        await favorite_service.add_favorite(
+            db,
+            user=current_user,
+            image_id=payload.image_id,
+            ip_address=request.client.host if request.client else None,
+        ),
+        "收藏成功",
+    )
+
+
+@router.delete("/favorites/{image_id}")
+async def remove_favorite_alias(
+    image_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    return api_response(
+        await favorite_service.remove_favorite(
+            db,
+            user=current_user,
+            image_id=image_id,
+            ip_address=request.client.host if request.client else None,
+        ),
+        "取消收藏成功",
+    )

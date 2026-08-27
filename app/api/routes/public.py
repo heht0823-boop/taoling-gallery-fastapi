@@ -2,12 +2,12 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import optional_current_user
+from app.api.deps import optional_current_user, require_user
 from app.core.database import get_db
-from app.core.response import api_response
+from app.core.response import api_response, created
 from app.models.user import User
 from app.schemas.behavior import ImageViewIn
-from app.services import image_service, view_service
+from app.services import favorite_service, image_service, view_service
 
 router = APIRouter(tags=["public"])
 
@@ -155,6 +155,42 @@ async def create_image_view(
             user_agent=request.headers.get("user-agent"),
         ),
         "浏览记录已保存",
+    )
+
+
+@router.post("/images/{image_id}/favorite")
+async def add_image_favorite(
+    image_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    return created(
+        await favorite_service.add_favorite(
+            db,
+            user=current_user,
+            image_id=image_id,
+            ip_address=request.client.host if request.client else None,
+        ),
+        "收藏成功",
+    )
+
+
+@router.delete("/images/{image_id}/favorite")
+async def remove_image_favorite(
+    image_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    return api_response(
+        await favorite_service.remove_favorite(
+            db,
+            user=current_user,
+            image_id=image_id,
+            ip_address=request.client.host if request.client else None,
+        ),
+        "取消收藏成功",
     )
 
 

@@ -1,9 +1,13 @@
 from uuid import uuid4
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import engine
+from app.core.config import settings
+from app.core.database import engine, get_db
+from app.core.security import create_access_token
+from app.main import app
 from app.models.image import Category, Image, ImageTag, Tag
 from app.models.user import User, UserStat
 
@@ -91,3 +95,26 @@ async def behavior_records(gallery_records):
     db.add(stats)
     await db.flush()
     return db, user, stats, public_image, private_image, related_image, matching_tag
+
+
+@pytest.fixture
+async def authenticated_client(behavior_records):
+    db, user, *_ = behavior_records
+
+    async def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+    transport = ASGITransport(app=app)
+    try:
+        async with AsyncClient(
+            transport=transport,
+            base_url="http://testserver",
+        ) as client:
+            client.cookies.set(
+                settings.auth_cookie_name,
+                create_access_token(user.id, user.role),
+            )
+            yield client
+    finally:
+        app.dependency_overrides.pop(get_db, None)

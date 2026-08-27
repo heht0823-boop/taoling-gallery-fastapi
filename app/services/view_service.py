@@ -1,10 +1,9 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import not_found
 from app.models.behavior import ImageViewRecord
-from app.models.image import Image
 from app.models.user import UserStat
+from app.services.image_access_service import require_public_image
 
 
 async def record_view(
@@ -17,17 +16,12 @@ async def record_view(
     user_agent: str | None,
 ) -> dict:
     """在一个事务中记录浏览明细，并同步图片与用户累计浏览数。"""
-    image = await db.scalar(
-        select(Image)
-        .where(
-            Image.id == image_id,
-            Image.status == "public",
-            Image.deleted_at.is_(None),
-        )
-        .with_for_update()
+    image = await require_public_image(
+        db,
+        image_id,
+        error_message="图片不存在或暂未公开，无法记录浏览",
+        for_update=True,
     )
-    if not image:
-        raise not_found("图片不存在或暂未公开，无法记录浏览")
 
     stats = None
     if user_id:

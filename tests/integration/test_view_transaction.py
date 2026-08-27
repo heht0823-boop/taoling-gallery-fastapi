@@ -1,11 +1,5 @@
-import pytest
-from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
 
-from app.core.config import settings
-from app.core.database import get_db
-from app.core.security import create_access_token
-from app.main import app
 from app.models.behavior import ImageViewRecord
 from app.services.view_service import record_view
 
@@ -38,32 +32,9 @@ async def test_record_view_updates_detail_and_user_counters(behavior_records):
     assert record_count == 1
 
 
-@pytest.fixture
-async def behavior_client(behavior_records):
-    db, user, *_ = behavior_records
-
-    async def override_get_db():
-        yield db
-
-    app.dependency_overrides[get_db] = override_get_db
-    transport = ASGITransport(app=app)
-    try:
-        async with AsyncClient(
-            transport=transport,
-            base_url="http://testserver",
-        ) as client:
-            client.cookies.set(
-                settings.auth_cookie_name,
-                create_access_token(user.id, user.role),
-            )
-            yield client
-    finally:
-        app.dependency_overrides.pop(get_db, None)
-
-
-async def test_record_view_http_contract(behavior_client, behavior_records):
+async def test_record_view_http_contract(authenticated_client, behavior_records):
     _, _, _, image, *_ = behavior_records
-    response = await behavior_client.post(
+    response = await authenticated_client.post(
         f"/api/images/{image.id}/view",
         json={"visitor_id": "browser-visitor"},
     )
