@@ -7,7 +7,13 @@ from app.core.database import get_db
 from app.core.response import api_response, created
 from app.models.user import User
 from app.schemas.behavior import ImageViewIn
-from app.services import download_service, favorite_service, image_service, view_service
+from app.services import (
+    download_service,
+    favorite_service,
+    image_service,
+    message_service,
+    view_service,
+)
 
 router = APIRouter(tags=["public"])
 
@@ -44,6 +50,23 @@ async def tags(
 ):
     return api_response(
         await image_service.list_tags(db, keyword=keyword, limit=limit)
+    )
+
+
+@router.get("/messages")
+async def messages(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=24, alias="pageSize", ge=1, le=100),
+    parent_id: int | None = Query(default=None, alias="parent_id", ge=1),
+    db: AsyncSession = Depends(get_db),
+):
+    return api_response(
+        await message_service.list_board(
+            db,
+            page=page,
+            page_size=page_size,
+            parent_id=parent_id,
+        )
     )
 
 

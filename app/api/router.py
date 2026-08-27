@@ -5,6 +5,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.public import router as public_router
 from app.api.routes.user.downloads import router as user_downloads_router
 from app.api.routes.user.favorites import router as user_favorites_router
+from app.api.routes.user.messages import router as user_messages_router
 from app.api.routes.user.profile import router as user_profile_router
 
 # 创建总API路由对象，统一添加 /api 全局前缀
@@ -17,4 +18,5 @@ api_router.include_router(auth_router)
 api_router.include_router(public_router)
 api_router.include_router(user_downloads_router)
 api_router.include_router(user_favorites_router)
+api_router.include_router(user_messages_router)
 api_router.include_router(user_profile_router)
