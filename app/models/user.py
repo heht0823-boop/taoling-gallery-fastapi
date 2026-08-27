@@ -22,13 +22,20 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)  # 登录用户名，全局唯一
     email: Mapped[str | None] = mapped_column(String(128), nullable=True, unique=True)  # 邮箱，可选且唯一
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)  # 密码哈希值，不存明文
-    role: Mapped[str] = mapped_column(ENUM("admin", "user"), nullable=False, default="user")  # 角色：admin管理员 / user普通用户
-    status: Mapped[str] = mapped_column(ENUM("normal", "disabled"), nullable=False, default="normal")  # 状态：normal正常 / disabled禁用
+    # 角色：admin管理员 / user普通用户
+    role: Mapped[str] = mapped_column(ENUM("admin", "user"), nullable=False, default="user")
+    # 状态：normal正常 / disabled禁用
+    status: Mapped[str] = mapped_column(
+        ENUM("normal", "disabled"), nullable=False, default="normal"
+    )
     avatar_url: Mapped[str | None] = mapped_column(String(500))  # 头像图片URL
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime)  # 最近一次登录时间
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime)  # 软删除时间，为空表示未删除
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)  # 创建时间
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)  # 更新时间，修改自动刷新
+    # 更新时间，修改自动刷新
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
+    )
 
     # 一对一关联用户统计表；lazy="selectin" 查询用户时自动带出统计，避免 N+1 问题
     stats: Mapped["UserStat | None"] = relationship(
@@ -45,14 +52,18 @@ class UserStat(Base):
     __tablename__ = "user_stats"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)  # 主键ID，自增
-    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, unique=True)  # 所属用户ID，关联users表，唯一
+    # 所属用户ID，关联users表，唯一
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, unique=True)
     favorite_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 收藏总数
     download_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 下载总数
     view_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 浏览总数
     ai_conversation_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # AI对话会话总数
     ai_message_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # AI对话消息总数
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)  # 创建时间
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)  # 更新时间，修改自动刷新
+    # 更新时间，修改自动刷新
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
+    )
 
     # 反向关联用户主表
     user: Mapped[User] = relationship(

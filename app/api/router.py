@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 # 导入auth模块路由实例，别名 auth_router
 from app.api.routes.auth import router as auth_router
 

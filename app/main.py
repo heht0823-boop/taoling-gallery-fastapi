@@ -4,8 +4,10 @@
 创建 FastAPI 应用实例，注册全局异常处理器，并定义健康检查接口。
 """
 from fastapi import FastAPI
-from app.core.exceptions import register_exception_handlers
+
 from app.api.router import api_router
+from app.core.exceptions import register_exception_handlers
+
 # 创建 FastAPI 应用实例，配置应用标题与版本号
 app=FastAPI(
     title='Taoling Gallery API',  # 应用名称，展示在 Swagger 文档标题

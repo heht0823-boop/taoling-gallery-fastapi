@@ -21,7 +21,10 @@ class Category(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)  # 主键ID
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)  # 分类名称，全局唯一
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 排序权重，数字越小越靠前
-    status: Mapped[str] = mapped_column(ENUM("normal", "disabled"), nullable=False, default="normal")  # 状态：normal启用 / disabled停用
+    # 状态：normal启用 / disabled停用
+    status: Mapped[str] = mapped_column(
+        ENUM("normal", "disabled"), nullable=False, default="normal"
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)  # 创建时间
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.now, onupdate=datetime.now  # 更新时间，修改自动刷新
@@ -38,7 +41,10 @@ class Tag(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)  # 标签名称，全局唯一
     color: Mapped[str | None] = mapped_column(String(32))  # 标签展示颜色（十六进制色值）
     usage_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 被图片引用的次数
-    status: Mapped[str] = mapped_column(ENUM("normal", "disabled"), nullable=False, default="normal")  # 状态：normal启用 / disabled停用
+    # 状态：normal启用 / disabled停用
+    status: Mapped[str] = mapped_column(
+        ENUM("normal", "disabled"), nullable=False, default="normal"
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)  # 创建时间
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.now, onupdate=datetime.now  # 更新时间，修改自动刷新
@@ -59,11 +65,13 @@ class Image(Base):
     category_id: Mapped[int | None] = mapped_column(BigInteger)  # 所属分类ID，关联categories表，可为空
     aspect_ratio: Mapped[str | None] = mapped_column(String(20))  # 宽高比（如 "16:9"），供前端布局使用
     status: Mapped[str] = mapped_column(
-        ENUM("public", "private", "draft", "deleted"),  # 可见状态：public公开 / private私有 / draft草稿 / deleted已删除
+        # 可见状态：public公开 / private私有 / draft草稿 / deleted已删除
+        ENUM("public", "private", "draft", "deleted"),
         nullable=False,
         default="draft",
     )
-    display_weight: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 展示权重，越大越靠前（置顶）
+    # 展示权重，越大越靠前（置顶）
+    display_weight: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     view_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 浏览次数
     download_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 下载次数
     favorite_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 收藏次数

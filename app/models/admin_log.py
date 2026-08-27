@@ -21,7 +21,8 @@ class AdminLog(Base):
     actor_id: Mapped[int | None] = mapped_column(BigInteger)  # 操作者用户ID，关联users表
     actor_name: Mapped[str | None] = mapped_column(String(100))  # 操作者用户名（快照，账号改名仍可追溯）
     actor_role: Mapped[str | None] = mapped_column(String(32))  # 操作者角色（如 admin）
-    action_type: Mapped[str] = mapped_column(String(100), nullable=False)  # 操作类型（如 create/update/delete）
+    # 操作类型（如 create/update/delete）
+    action_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target_type: Mapped[str | None] = mapped_column(String(100))  # 被操作对象类型（如图片、用户）
     target_id: Mapped[int | None] = mapped_column(BigInteger)  # 被操作对象ID
     title: Mapped[str] = mapped_column(String(200), nullable=False)  # 日志标题（一句话描述操作）

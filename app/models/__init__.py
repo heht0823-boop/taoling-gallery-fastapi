@@ -13,3 +13,23 @@ from app.models.image import Category, Image, ImageTag, Tag  # 分类、图片�
 from app.models.message import UserMessage  # 用户留言表
 from app.models.user import User, UserStat  # 用户表、用户统计表
 from app.models.weather import WeatherForecastCache, WeatherLiveCache  # 天气预报、实时天气缓存表
+
+__all__ = [
+    "AdminLog",
+    "AiConversation",
+    "AiMemory",
+    "AiMessage",
+    "Base",
+    "Category",
+    "DownloadRecord",
+    "Favorite",
+    "Image",
+    "ImageTag",
+    "ImageViewRecord",
+    "Tag",
+    "User",
+    "UserMessage",
+    "UserStat",
+    "WeatherForecastCache",
+    "WeatherLiveCache",
+]

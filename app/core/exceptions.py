@@ -2,9 +2,10 @@ import logging
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
 # FastAPI底层HTTP异常，继承自starlette
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from fastapi.responses import JSONResponse
 
 # 获取当前模块日志对象，用于打印异常堆栈
 logger = logging.getLogger(__name__)

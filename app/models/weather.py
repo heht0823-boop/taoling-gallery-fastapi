@@ -19,7 +19,8 @@ class WeatherLiveCache(Base):
     __tablename__ = "weather_live_cache"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)  # 主键ID
-    adcode: Mapped[str] = mapped_column(String(20), nullable=False, unique=True)  # 行政区划编码，唯一（一个城市一条缓存）
+    # 行政区划编码，唯一（一个城市一条缓存）
+    adcode: Mapped[str] = mapped_column(String(20), nullable=False, unique=True)
     city: Mapped[str | None] = mapped_column(String(100))  # 城市名称
     province: Mapped[str | None] = mapped_column(String(100))  # 省份名称
     weather: Mapped[str | None] = mapped_column(String(100))  # 天气现象（晴/多云/雨等）
@@ -31,7 +32,8 @@ class WeatherLiveCache(Base):
     source: Mapped[str | None] = mapped_column(String(32))  # 数据来源标识（如 amap）
     raw_payload: Mapped[dict | None] = mapped_column(JSON)  # 接口原始返回JSON，便于排查与扩展
     fetched_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)  # 拉取时间，用于判断缓存是否过期
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)  # 记录创建时间
+    # 记录创建时间
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.now, onupdate=datetime.now  # 更新时间，修改自动刷新
     )
@@ -51,7 +53,8 @@ class WeatherForecastCache(Base):
     source: Mapped[str | None] = mapped_column(String(32))  # 数据来源标识（如 amap）
     raw_payload: Mapped[dict | None] = mapped_column(JSON)  # 接口原始返回JSON
     fetched_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)  # 拉取时间，用于判断缓存是否过期
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)  # 记录创建时间
+    # 记录创建时间
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.now, onupdate=datetime.now  # 更新时间，修改自动刷新
     )

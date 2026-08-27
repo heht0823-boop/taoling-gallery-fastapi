@@ -1,5 +1,7 @@
-from app.core.exceptions import AppError,conflict
+from app.core.exceptions import AppError, conflict
 from app.core.response import api_response
+
+
 def test_conflict_error():
     exc=conflict('用户名已存在')
     assert isinstance(exc,AppError)

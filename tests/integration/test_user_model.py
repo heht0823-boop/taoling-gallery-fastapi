@@ -1,7 +1,9 @@
-import asyncio
 from sqlalchemy import select
+
 from app.core.database import SessionLocal
 from app.models.user import User
+
+
 async def test_read_one_user():
     async with SessionLocal() as db:
         result=await db.execute(

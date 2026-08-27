@@ -34,13 +34,16 @@ class AiMessage(Base):
     __tablename__ = "ai_messages"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)  # 主键ID
-    conversation_id: Mapped[int] = mapped_column(BigInteger, nullable=False)  # 所属会话ID，关联ai_conversations表
+    # 所属会话ID，关联ai_conversations表
+    conversation_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)  # 所属用户ID，关联users表
-    role: Mapped[str] = mapped_column(ENUM("user", "assistant"), nullable=False)  # 消息角色：user提问 / assistant回答
+    # 消息角色：user提问 / assistant回答
+    role: Mapped[str] = mapped_column(ENUM("user", "assistant"), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)  # 消息正文内容
     recommended_tags: Mapped[list | None] = mapped_column(JSON)  # AI回复中推荐的图片标签列表
     recommended_image_ids: Mapped[list | None] = mapped_column(JSON)  # AI回复中推荐的图片ID列表
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)  # 消息发送时间
+    # 消息发送时间
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime)  # 软删除时间，为空表示未删除
 
 
@@ -52,7 +55,8 @@ class AiMemory(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)  # 主键ID
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)  # 所属用户ID，关联users表
     conversation_id: Mapped[int | None] = mapped_column(BigInteger)  # 来源会话ID，为空表示跨会话的全局记忆
-    memory_type: Mapped[str] = mapped_column(ENUM("short", "long"), nullable=False)  # 记忆类型：short短期 / long长期
+    # 记忆类型：short短期 / long长期
+    memory_type: Mapped[str] = mapped_column(ENUM("short", "long"), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)  # 记忆内容
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)  # 创建时间
     updated_at: Mapped[datetime] = mapped_column(

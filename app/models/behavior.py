@@ -31,7 +31,8 @@ class DownloadRecord(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)  # 主键ID
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)  # 下载用户ID，关联users表
     image_id: Mapped[int] = mapped_column(BigInteger, nullable=False)  # 被下载图片ID，关联images表
-    image_title: Mapped[str] = mapped_column(String(200), nullable=False)  # 图片标题快照（图片改名后仍可追溯）
+    # 图片标题快照（图片改名后仍可追溯）
+    image_title: Mapped[str] = mapped_column(String(200), nullable=False)
     image_url: Mapped[str] = mapped_column(String(500), nullable=False)  # 图片地址快照
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)  # 下载时间
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime)  # 软删除时间，为空表示未删除
