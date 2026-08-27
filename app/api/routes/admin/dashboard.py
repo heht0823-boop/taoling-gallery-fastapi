@@ -1,0 +1,38 @@
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import require_admin
+from app.core.database import get_db
+from app.core.response import api_response
+from app.models.user import User
+from app.services.admin import dashboard_service
+
+router = APIRouter(prefix="/admin", tags=["admin-dashboard"])
+
+
+@router.get("/dashboard/stats")
+async def dashboard_stats(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    return api_response(await dashboard_service.dashboard_stats(db))
+
+
+@router.get("/logs")
+async def logs(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=12, alias="pageSize", ge=1, le=100),
+    action_type: str | None = None,
+    target_type: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    return api_response(
+        await dashboard_service.list_logs(
+            db,
+            page=page,
+            page_size=page_size,
+            action_type=action_type,
+            target_type=target_type,
+        )
+    )
