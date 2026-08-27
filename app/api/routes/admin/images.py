@@ -7,7 +7,7 @@
 from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_admin
+from app.api.deps import client_ip, require_admin
 from app.core.database import get_db
 from app.core.response import api_response, created
 from app.models.user import User
@@ -20,12 +20,6 @@ from app.schemas.admin import (
 from app.services.admin import image_service
 
 router = APIRouter(prefix="/admin", tags=["admin-images"])
-
-
-def _client_ip(request: Request) -> str | None:
-    """读取管理员来源 IP；测试或无连接上下文时允许为空。"""
-
-    return request.client.host if request.client else None
 
 
 @router.post("/files/images")
@@ -52,7 +46,7 @@ async def create_image(
             db,
             admin=admin,
             payload=payload.model_dump(),
-            ip_address=_client_ip(request),
+            ip_address=client_ip(request),
         ),
         "图片创建成功",
     )
@@ -124,7 +118,7 @@ async def update_image(
             admin=admin,
             image_id=image_id,
             payload=payload.model_dump(exclude_unset=True),
-            ip_address=_client_ip(request),
+            ip_address=client_ip(request),
         ),
         "图片更新成功",
     )
@@ -146,7 +140,7 @@ async def update_image_status(
             admin=admin,
             image_id=image_id,
             status=payload.status,
-            ip_address=_client_ip(request),
+            ip_address=client_ip(request),
         ),
         "图片状态更新成功",
     )
@@ -166,7 +160,7 @@ async def delete_image(
             db,
             admin=admin,
             image_id=image_id,
-            ip_address=_client_ip(request),
+            ip_address=client_ip(request),
         ),
         "图片删除成功",
     )
@@ -188,7 +182,7 @@ async def restore_image(
             admin=admin,
             image_id=image_id,
             status=payload.status,
-            ip_address=_client_ip(request),
+            ip_address=client_ip(request),
         ),
         "图片恢复成功",
     )

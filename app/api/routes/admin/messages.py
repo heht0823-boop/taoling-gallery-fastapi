@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_admin
+from app.api.deps import client_ip, require_admin
 from app.core.database import get_db
 from app.core.response import api_response, created
 from app.models.user import User
@@ -11,12 +11,6 @@ from app.schemas.admin import AdminMessageReplyIn
 from app.services.admin import message_service
 
 router = APIRouter(prefix="/admin", tags=["admin-messages"])
-
-
-def _client_ip(request: Request) -> str | None:
-    """提取管理员 IP 写入审计记录。"""
-
-    return request.client.host if request.client else None
 
 
 @router.get("/messages")
@@ -72,7 +66,7 @@ async def reply_message(
             admin=admin,
             message_id=message_id,
             content=payload.content,
-            ip_address=_client_ip(request),
+            ip_address=client_ip(request),
             user_agent=request.headers.get("user-agent"),
         ),
         "回复成功",
@@ -93,7 +87,7 @@ async def block_message(
             db,
             admin=admin,
             message_id=message_id,
-            ip_address=_client_ip(request),
+            ip_address=client_ip(request),
         ),
         "留言已屏蔽",
     )

@@ -7,7 +7,7 @@
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import optional_current_user, require_user
+from app.api.deps import client_ip, optional_current_user, require_user
 from app.core.database import get_db
 from app.core.response import api_response, created
 from app.core.security import clear_auth_cookie, set_auth_cookie
@@ -35,7 +35,7 @@ async def register(payload: RegisterIn, request: Request, db: AsyncSession = Dep
         username=payload.username,
         email=payload.email,
         password=payload.password,
-        ip_address=request.client.host if request.client else None,
+        ip_address=client_ip(request),
     )
     # pop把token从返回字典取出，不在响应body返回，放到cookie
     token = result.pop("token")
@@ -60,7 +60,7 @@ async def login(payload: LoginIn, request: Request, db: AsyncSession = Depends(g
         db,
         account=payload.account,
         password=payload.password,
-        ip_address=request.client.host if request.client else None,
+        ip_address=client_ip(request),
     )
     token = result.pop("token")
     # 包装正常业务响应
@@ -89,7 +89,7 @@ async def logout(
     data = await auth_service.logout(
         db,
         user=current_user,
-        ip_address=request.client.host if request.client else None,
+        ip_address=client_ip(request),
     )
     response = api_response(data, "退出登录成功")
     # 设置cookie过期，清除浏览器保存的认证cookie

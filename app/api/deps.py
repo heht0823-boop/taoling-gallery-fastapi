@@ -103,3 +103,13 @@ async def require_admin(
     if user.role != "admin":
         raise forbidden("只有管理员可以访问")
     return user
+
+
+def client_ip(request: Request) -> str | None:
+    """
+    【客户端IP提取】
+    安全读取请求来源IP；测试环境或无连接上下文时返回None
+    :param request: fastapi Request对象
+    :return: 客户端IP字符串，无连接信息返回None
+    """
+    return request.client.host if request.client else None

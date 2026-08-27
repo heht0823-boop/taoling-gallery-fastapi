@@ -31,22 +31,22 @@ def bad_request(message: str, data: dict | None = None) -> AppError:
     return AppError(400, message, data)
 
 
-def unauthorized(message: str = '请先登录后再进行操作') -> AppError:
+def unauthorized(message: str = "请先登录后再进行操作") -> AppError:
     """构造401 未登录/身份认证失败异常"""
     return AppError(401, message)
 
 
-def forbidden(message: str = '当前账号没有权限执行该操作') -> AppError:
+def forbidden(message: str = "当前账号没有权限执行该操作") -> AppError:
     """构造403 权限不足禁止访问异常"""
     return AppError(403, message)
 
 
-def not_found(message: str = '资源不存在') -> AppError:
+def not_found(message: str = "资源不存在") -> AppError:
     """构造404 资源未找到异常"""
     return AppError(404, message)
 
 
-def conflict(message: str = '数据已存在，请勿重复提交') -> AppError:
+def conflict(message: str = "数据已存在，请勿重复提交") -> AppError:
     """构造409 数据冲突，重复提交异常"""
     return AppError(409, message)
 

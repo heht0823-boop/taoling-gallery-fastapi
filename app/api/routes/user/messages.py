@@ -7,7 +7,7 @@
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_user
+from app.api.deps import client_ip, require_user
 from app.core.database import get_db
 from app.core.response import api_response, created
 from app.models.user import User
@@ -51,7 +51,7 @@ async def create_message(
             user=current_user,
             content=payload.content,
             parent_id=payload.parent_id,
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip(request),
             user_agent=request.headers.get("user-agent"),
         ),
         "留言提交成功，审核通过后展示",

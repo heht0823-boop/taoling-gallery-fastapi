@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_admin
+from app.api.deps import client_ip, require_admin
 from app.core.database import get_db
 from app.core.response import api_response
 from app.models.user import User
@@ -11,12 +11,6 @@ from app.schemas.admin import UserStatusIn
 from app.services.admin import user_service
 
 router = APIRouter(prefix="/admin", tags=["admin-users"])
-
-
-def _client_ip(request: Request) -> str | None:
-    """安全提取客户端 IP 供审计日志使用。"""
-
-    return request.client.host if request.client else None
 
 
 @router.get("/users")
@@ -70,7 +64,7 @@ async def update_user_status(
             admin=admin,
             user_id=user_id,
             status=payload.status,
-            ip_address=_client_ip(request),
+            ip_address=client_ip(request),
         ),
         "用户状态更新成功",
     )
@@ -90,7 +84,7 @@ async def delete_user(
             db,
             admin=admin,
             user_id=user_id,
-            ip_address=_client_ip(request),
+            ip_address=client_ip(request),
         ),
         "用户删除成功",
     )

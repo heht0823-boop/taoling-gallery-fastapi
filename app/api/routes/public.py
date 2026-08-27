@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import optional_current_user, require_user
+from app.api.deps import client_ip, optional_current_user, require_user
 from app.core.database import get_db
 from app.core.response import api_response, created
 from app.models.user import User
@@ -194,7 +194,7 @@ async def create_image_view(
             image_id=image_id,
             user_id=current_user.id if current_user else None,
             visitor_id=payload.visitor_id,
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip(request),
             user_agent=request.headers.get("user-agent"),
         ),
         "浏览记录已保存",
@@ -215,7 +215,7 @@ async def add_image_favorite(
             db,
             user=current_user,
             image_id=image_id,
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip(request),
         ),
         "收藏成功",
     )
@@ -235,7 +235,7 @@ async def remove_image_favorite(
             db,
             user=current_user,
             image_id=image_id,
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip(request),
         ),
         "取消收藏成功",
     )
@@ -255,7 +255,7 @@ async def create_image_download(
             db,
             user=current_user,
             image_id=image_id,
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip(request),
         ),
         "下载记录已创建",
     )

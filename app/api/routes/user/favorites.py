@@ -7,7 +7,7 @@
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_user
+from app.api.deps import client_ip, require_user
 from app.core.database import get_db
 from app.core.response import api_response, created
 from app.models.user import User
@@ -50,7 +50,7 @@ async def add_favorite_alias(
             db,
             user=current_user,
             image_id=payload.image_id,
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip(request),
         ),
         "收藏成功",
     )
@@ -70,7 +70,7 @@ async def remove_favorite_alias(
             db,
             user=current_user,
             image_id=image_id,
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip(request),
         ),
         "取消收藏成功",
     )

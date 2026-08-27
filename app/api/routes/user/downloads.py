@@ -7,7 +7,7 @@
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_user
+from app.api.deps import client_ip, require_user
 from app.core.database import get_db
 from app.core.response import api_response, created
 from app.models.user import User
@@ -50,7 +50,7 @@ async def create_download_alias(
             db,
             user=current_user,
             image_id=payload.image_id,
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip(request),
         ),
         "下载记录已创建",
     )
@@ -70,7 +70,7 @@ async def delete_download(
             db,
             user=current_user,
             record_id=record_id,
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip(request),
         ),
         "下载记录已删除",
     )
@@ -88,7 +88,7 @@ async def clear_downloads(
         await download_service.clear_downloads(
             db,
             user=current_user,
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip(request),
         ),
         "下载记录已清空",
     )

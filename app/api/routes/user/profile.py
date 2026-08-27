@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
-from app.api.deps import require_user
+from app.api.deps import client_ip, require_user
 from app.core.database import get_db
 from app.core.response import api_response
 from app.models.user import User
@@ -44,7 +44,7 @@ async def update_profile(
             db,
             user_id=current_user.id,
             updates=payload.model_dump(exclude_unset=True),
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip(request),
         ),
         "资料修改成功",
     )
@@ -88,7 +88,7 @@ async def update_avatar(
             db,
             user_id=current_user.id,
             asset=asset,
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip(request),
         )
     except Exception:
         avatar_service.remove_avatar_asset(asset)
@@ -111,7 +111,7 @@ async def update_password(
             user_id=current_user.id,
             old_password=payload.old_password,
             new_password=payload.new_password,
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip(request),
         ),
         "密码修改成功",
     )

@@ -20,7 +20,7 @@ from app.models.image import Category, Image, ImageTag, Tag
 from app.models.user import User
 from app.services.image_variant_service import ensure_variant
 from app.services.log_service import write_log
-from app.utils.image_url import image_thumbnail_url, normalize_image_url
+from app.utils.image_url import image_thumbnail_url, normalize_image_url, public_upload_url
 from app.utils.pagination import normalize_pagination, pagination_payload
 
 ALLOWED_IMAGE_TYPES = {
@@ -29,13 +29,6 @@ ALLOWED_IMAGE_TYPES = {
     "image/webp": (".webp", "WEBP"),
 }
 ALLOWED_STATUSES = {"public", "private", "draft", "deleted"}
-
-
-def _public_upload_url(path: Path) -> str:
-    """把上传根目录内的绝对路径转换成前端可访问的公开 URL。"""
-
-    relative = path.resolve().relative_to(settings.upload_path.resolve())
-    return f"{settings.app_url.rstrip('/')}/uploads/{relative.as_posix()}"
 
 
 def _verify_image(path: Path, expected_format: str) -> None:
@@ -94,9 +87,9 @@ async def upload_image(file: UploadFile | None) -> dict:
         for path in generated:
             path.unlink(missing_ok=True)
         raise
-    source_url = _public_upload_url(source)
-    thumbnail_url = _public_upload_url(thumbnail)
-    large_url = _public_upload_url(large)
+    source_url = public_upload_url(source)
+    thumbnail_url = public_upload_url(thumbnail)
+    large_url = public_upload_url(large)
     return {
         "image_url": source_url,
         "thumbnail_url": thumbnail_url,

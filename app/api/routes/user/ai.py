@@ -13,7 +13,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_user
+from app.api.deps import client_ip, require_user
 from app.core.database import get_db
 from app.core.exceptions import AppError
 from app.core.response import api_response, created
@@ -22,6 +22,7 @@ from app.schemas.ai import AiChatIn, AiConversationCreateIn
 from app.services import ai_service
 
 logger = logging.getLogger(__name__)
+
 router = APIRouter(tags=["ai-assistant"])
 
 
@@ -87,7 +88,7 @@ async def chat(
 ):
     """发送 AI 消息；默认返回 SSE，显式关闭流式时返回 HTTP 201 JSON。"""
 
-    ip_address = request.client.host if request.client else None
+    ip_address = client_ip(request)
     if not _should_stream(stream, payload.stream):
         return created(
             await ai_service.chat(
@@ -130,7 +131,7 @@ async def create_conversation(
             db,
             user=current_user,
             title=payload.title,
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip(request),
         ),
         "AI 会话创建成功",
     )
@@ -182,7 +183,7 @@ async def remove_conversation(
             db,
             user=current_user,
             conversation_id=conversation_id,
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip(request),
         ),
         "AI 会话已删除",
     )

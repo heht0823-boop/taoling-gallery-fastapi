@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_admin
+from app.api.deps import client_ip, require_admin
 from app.core.database import get_db
 from app.core.response import api_response, created
 from app.models.user import User
@@ -11,12 +11,6 @@ from app.schemas.admin import TagCreateIn, TagUpdateIn
 from app.services.admin import taxonomy_service
 
 router = APIRouter(prefix="/admin", tags=["admin-tags"])
-
-
-def _client_ip(request: Request) -> str | None:
-    """安全提取客户端 IP 供审计日志使用。"""
-
-    return request.client.host if request.client else None
 
 
 @router.get("/tags")
@@ -57,7 +51,7 @@ async def create_tag(
             name=payload.name,
             color=payload.color,
             status=payload.status,
-            ip_address=_client_ip(request),
+            ip_address=client_ip(request),
         ),
         "标签创建成功",
     )
@@ -80,7 +74,7 @@ async def update_tag(
             admin=admin,
             tag_id=tag_id,
             updates=payload.model_dump(exclude_unset=True),
-            ip_address=_client_ip(request),
+            ip_address=client_ip(request),
         ),
         "标签更新成功",
     )
@@ -100,7 +94,7 @@ async def delete_tag(
             db,
             admin=admin,
             tag_id=tag_id,
-            ip_address=_client_ip(request),
+            ip_address=client_ip(request),
         ),
         "标签删除成功",
     )

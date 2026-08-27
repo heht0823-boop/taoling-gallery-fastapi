@@ -20,6 +20,7 @@ from PIL import Image as PILImage
 from app.core.config import settings
 from app.core.exceptions import bad_request
 from app.services.image_variant_service import ensure_variant
+from app.utils.image_url import public_upload_url
 
 ALLOWED_AVATAR_TYPES = {
     "image/jpeg": (".jpg", "JPEG"),
@@ -38,13 +39,6 @@ class AvatarAsset:
     srcset: str | None
     processor_enabled: bool
     paths: tuple[Path, ...]
-
-
-def public_upload_url(path: Path) -> str:
-    """把上传目录内的文件路径转换成公开访问 URL。"""
-
-    relative = path.resolve().relative_to(settings.upload_path.resolve())
-    return f"{settings.app_url.rstrip('/')}/uploads/{relative.as_posix()}"
 
 
 def _validate_image(path: Path, expected_format: str) -> None:

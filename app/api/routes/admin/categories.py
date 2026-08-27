@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_admin
+from app.api.deps import client_ip, require_admin
 from app.core.database import get_db
 from app.core.response import api_response, created
 from app.models.user import User
@@ -11,12 +11,6 @@ from app.schemas.admin import CategoryCreateIn, CategoryUpdateIn
 from app.services.admin import taxonomy_service
 
 router = APIRouter(prefix="/admin", tags=["admin-categories"])
-
-
-def _client_ip(request: Request) -> str | None:
-    """安全读取客户端 IP，供管理员审计日志记录。"""
-
-    return request.client.host if request.client else None
 
 
 @router.get("/categories")
@@ -57,7 +51,7 @@ async def create_category(
             name=payload.name,
             sort_order=payload.sort_order,
             status=payload.status,
-            ip_address=_client_ip(request),
+            ip_address=client_ip(request),
         ),
         "分类创建成功",
     )
@@ -80,7 +74,7 @@ async def update_category(
             admin=admin,
             category_id=category_id,
             updates=payload.model_dump(exclude_unset=True),
-            ip_address=_client_ip(request),
+            ip_address=client_ip(request),
         ),
         "分类更新成功",
     )
@@ -100,7 +94,7 @@ async def delete_category(
             db,
             admin=admin,
             category_id=category_id,
-            ip_address=_client_ip(request),
+            ip_address=client_ip(request),
         ),
         "分类删除成功",
     )

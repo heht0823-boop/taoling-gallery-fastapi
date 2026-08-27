@@ -10,6 +10,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
+from app.models.ai import AiMessage
 from app.models.behavior import Favorite
 from app.models.image import Category, Image, ImageTag, Tag
 from app.models.user import User
@@ -173,8 +174,6 @@ async def _last_recommended_ids(
     user_id: int,
 ) -> list[int]:
     """读取会话最近一条助手消息的推荐图片，供“收藏这些”省略 ID 时使用。"""
-
-    from app.models.ai import AiMessage
 
     row = await db.scalar(
         select(AiMessage)

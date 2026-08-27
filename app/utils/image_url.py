@@ -1,10 +1,18 @@
 """原图、缩略图和头像变体 URL 的规范化工具。"""
 
 import re
+from pathlib import Path
 from typing import Any
 from urllib.parse import quote, unquote, urlsplit
 
 from app.core.config import settings
+
+
+def public_upload_url(path: Path) -> str:
+    """把上传根目录内的文件路径转换成公开访问 URL。"""
+
+    relative = path.resolve().relative_to(settings.upload_path.resolve())
+    return f"{settings.app_url.rstrip('/')}/uploads/{relative.as_posix()}"
 
 
 def normalize_image_url(url: str | None) -> str:

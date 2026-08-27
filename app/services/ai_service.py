@@ -20,6 +20,7 @@ from app.models.ai import AiConversation, AiMemory, AiMessage
 from app.models.image import Category, Image, Tag
 from app.models.user import User, UserStat
 from app.services import ai_provider, ai_tools, image_service
+from app.services.ai_tools import IMAGE_TOOL_NAMES
 from app.services.log_service import write_log
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,6 @@ IMAGE_GENERATION_REPLY = (
     "我目前不提供图片生成、绘图或修图能力。如果你需要某类图片，我可以帮你"
     "在桃灵图库里查找相近作品；也可以去留言板留言，让管理员后续制作或发布。"
 )
-IMAGE_TOOL_NAMES = {"search_images", "get_hot_images", "get_latest_images"}
 
 
 def _is_image_generation_request(message: str) -> bool:
