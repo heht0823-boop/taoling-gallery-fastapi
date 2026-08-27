@@ -7,7 +7,7 @@ from app.core.database import get_db
 from app.core.response import api_response, created
 from app.models.user import User
 from app.schemas.behavior import ImageViewIn
-from app.services import favorite_service, image_service, view_service
+from app.services import download_service, favorite_service, image_service, view_service
 
 router = APIRouter(tags=["public"])
 
@@ -191,6 +191,24 @@ async def remove_image_favorite(
             ip_address=request.client.host if request.client else None,
         ),
         "取消收藏成功",
+    )
+
+
+@router.post("/images/{image_id}/download")
+async def create_image_download(
+    image_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    return created(
+        await download_service.create_download(
+            db,
+            user=current_user,
+            image_id=image_id,
+            ip_address=request.client.host if request.client else None,
+        ),
+        "下载记录已创建",
     )
 
 
