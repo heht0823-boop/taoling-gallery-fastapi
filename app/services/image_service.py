@@ -1,9 +1,17 @@
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import AppError, not_found
 from app.models.behavior import Favorite
 from app.models.image import Category, Image, ImageTag, Tag
-from app.utils.image_url import image_thumbnail_url, normalize_image_url
+from app.services.image_variant_service import (
+    ensure_variant,
+    local_upload_path_from_url,
+    sanitize_format,
+    sanitize_quality,
+    sanitize_width,
+)
+from app.utils.image_url import image_thumbnail_url, image_variant_url, normalize_image_url
 from app.utils.pagination import normalize_pagination, pagination_payload
 
 
@@ -242,3 +250,131 @@ async def list_images(
             total=total,
         ),
     }
+
+
+async def get_public_image(
+    db: AsyncSession,
+    *,
+    image_id: int,
+    current_user_id: int | None,
+) -> dict:
+    """读取一张公开图片详情，并返回完整 GalleryImage 字段。"""
+    image = await db.scalar(
+        select(Image).where(
+            Image.id == image_id,
+            Image.status == "public",
+            Image.deleted_at.is_(None),
+        )
+    )
+    if not image:
+        raise not_found("图片不存在或暂未公开")
+
+    category_map, tags_by_image, favorite_ids = await _load_image_context(
+        db,
+        [image],
+        current_user_id=current_user_id,
+    )
+    return serialize_image(
+        image,
+        category=category_map.get(image.category_id),
+        tags=tags_by_image.get(image.id, []),
+        is_favorited=image.id in favorite_ids,
+    )
+
+
+async def related_images(
+    db: AsyncSession,
+    *,
+    image_id: int,
+    current_user_id: int | None,
+    limit: int,
+) -> list[dict]:
+    """返回同分类的公开图片，并保持与图片列表完全相同的字段结构。"""
+    current = await db.scalar(
+        select(Image).where(
+            Image.id == image_id,
+            Image.status == "public",
+            Image.deleted_at.is_(None),
+        )
+    )
+    if not current:
+        raise not_found("图片不存在或暂未公开")
+
+    conditions = [
+        Image.id != current.id,
+        Image.status == "public",
+        Image.deleted_at.is_(None),
+    ]
+    if current.category_id:
+        conditions.append(Image.category_id == current.category_id)
+
+    rows = await db.execute(
+        select(Image)
+        .where(*conditions)
+        .order_by(Image.display_weight.desc(), Image.created_at.desc())
+        .limit(min(max(limit, 1), 20))
+    )
+    images = list(rows.scalars().all())
+    category_map, tags_by_image, favorite_ids = await _load_image_context(
+        db,
+        images,
+        current_user_id=current_user_id,
+    )
+    return [
+        serialize_image(
+            image,
+            category=category_map.get(image.category_id),
+            tags=tags_by_image.get(image.id, []),
+            is_favorited=image.id in favorite_ids,
+        )
+        for image in images
+    ]
+
+
+async def get_image_thumbnail(
+    db: AsyncSession,
+    *,
+    image_id: int,
+    width: int | str | None,
+    image_format: str | None,
+    quality: int | str | None,
+) -> dict:
+    """解析缩略图为本地缓存文件或对象存储重定向。"""
+    image = await db.scalar(
+        select(Image).where(
+            Image.id == image_id,
+            Image.status == "public",
+            Image.deleted_at.is_(None),
+        )
+    )
+    if not image:
+        raise not_found("图片不存在或暂未公开")
+
+    image_url = normalize_image_url(image.image_url)
+    thumbnail_url = normalize_image_url(image.thumbnail_url)
+    source_url = thumbnail_url if thumbnail_url and thumbnail_url != image_url else image_url
+    local_source = local_upload_path_from_url(source_url)
+    if local_source:
+        path, content_type = await ensure_variant(
+            local_source,
+            width=width,
+            image_format=image_format,
+            quality=quality,
+        )
+        return {"type": "file", "path": path, "content_type": content_type}
+
+    safe_width = sanitize_width(width, 420)
+    optimized_url = image_variant_url(
+        source_url,
+        width=safe_width,
+        height=safe_width,
+        image_format=sanitize_format(image_format),
+        quality=sanitize_quality(quality),
+    )
+    if optimized_url and optimized_url != source_url:
+        return {"type": "redirect", "url": optimized_url}
+
+    raise AppError(
+        503,
+        "图片压缩服务未启用：请配置本地上传文件或图片处理服务",
+    )
