@@ -4,6 +4,8 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class MessageCreateIn(BaseModel):
+    """用户发布留言或回复的 JSON 请求。"""
+
     model_config = ConfigDict(extra="ignore")
 
     content: str = Field(max_length=2000)

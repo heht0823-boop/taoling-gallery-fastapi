@@ -1,3 +1,5 @@
+"""业务异常类型及统一 HTTP 异常响应处理。"""
+
 import logging
 
 from fastapi import FastAPI, Request

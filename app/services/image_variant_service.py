@@ -19,6 +19,8 @@ ALLOWED_FORMATS = {"webp", "avif", "jpg", "jpeg", "png"}
 
 
 def sanitize_width(value: int | str | None, fallback: int = 420) -> int:
+    """把缩略图宽度限制在服务支持的安全范围内。"""
+
     try:
         width = int(value or fallback)
     except (TypeError, ValueError):
@@ -27,6 +29,8 @@ def sanitize_width(value: int | str | None, fallback: int = 420) -> int:
 
 
 def sanitize_quality(value: int | str | None) -> int:
+    """把图片质量限制在兼顾体积和清晰度的范围内。"""
+
     try:
         quality = int(value or settings.image_optimizer_quality)
     except (TypeError, ValueError):
@@ -35,6 +39,8 @@ def sanitize_quality(value: int | str | None) -> int:
 
 
 def sanitize_format(value: str | None) -> str:
+    """规范输出格式并拒绝不支持的图片编码。"""
+
     image_format = str(value or settings.image_optimizer_format).lower()
     return image_format if image_format in ALLOWED_FORMATS else "webp"
 
@@ -63,6 +69,8 @@ def _variant_filename(
     image_format: str,
     quality: int,
 ) -> str:
+    """构造稳定且可缓存的图片变体文件名。"""
+
     stem = re.sub(r"[^a-zA-Z0-9_-]", "", source.stem)
     extension = "jpg" if image_format == "jpeg" else image_format
     return f"{stem}-{width}w-q{quality}.{extension}"
@@ -76,6 +84,8 @@ def _write_variant(
     image_format: str,
     quality: int,
 ) -> None:
+    """使用 Pillow 生成指定尺寸、格式和质量的变体文件。"""
+
     target.parent.mkdir(parents=True, exist_ok=True)
     with PILImage.open(source) as opened:
         image = ImageOps.exif_transpose(opened)

@@ -1,3 +1,5 @@
+"""分页参数校验和统一分页响应构造。"""
+
 def normalize_pagination(
     page: int | None,
     page_size: int | None,

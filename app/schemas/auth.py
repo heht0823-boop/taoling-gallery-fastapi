@@ -7,6 +7,8 @@ from pydantic import BaseModel, ConfigDict
 
 
 class RegisterIn(BaseModel):
+    """用户注册 JSON 请求。"""
+
     model_config = ConfigDict(extra="ignore")
     username: str
     email: str | None = None
@@ -14,6 +16,8 @@ class RegisterIn(BaseModel):
 
 
 class LoginIn(BaseModel):
+    """使用用户名或邮箱登录的 JSON 请求。"""
+
     model_config = ConfigDict(extra="ignore")
     account: str
     password: str

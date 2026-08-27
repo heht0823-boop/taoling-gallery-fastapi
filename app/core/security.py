@@ -1,3 +1,5 @@
+"""密码哈希、JWT 和认证 Cookie 工具。"""
+
 import re
 from datetime import datetime, timedelta, timezone
 

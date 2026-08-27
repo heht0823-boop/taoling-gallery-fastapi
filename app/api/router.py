@@ -1,3 +1,5 @@
+"""应用 API 子路由的集中注册入口。"""
+
 from fastapi import APIRouter
 
 from app.api.routes.admin.categories import router as admin_categories_router

@@ -31,6 +31,8 @@ REMOTE_REDIRECT_LIMIT = 3
 
 @dataclass(frozen=True)
 class AvatarAsset:
+    """一次头像落盘操作产生的原图和缩略图资产。"""
+
     avatar_url: str
     thumbnail_url: str | None
     srcset: str | None
@@ -39,11 +41,15 @@ class AvatarAsset:
 
 
 def public_upload_url(path: Path) -> str:
+    """把上传目录内的文件路径转换成公开访问 URL。"""
+
     relative = path.resolve().relative_to(settings.upload_path.resolve())
     return f"{settings.app_url.rstrip('/')}/uploads/{relative.as_posix()}"
 
 
 def _validate_image(path: Path, expected_format: str) -> None:
+    """解码图片并确认实际格式与声明格式一致。"""
+
     try:
         with PILImage.open(path) as image:
             actual_format = str(image.format or "").upper()
@@ -59,6 +65,8 @@ async def _write_chunks(
     *,
     content_type: str,
 ) -> Path:
+    """限量写入异步文件块并返回校验后的临时文件。"""
+
     type_config = ALLOWED_AVATAR_TYPES.get(content_type.lower())
     if not type_config:
         raise bad_request("头像仅支持 jpg、png、webp 图片")
@@ -84,17 +92,23 @@ async def _write_chunks(
 
 
 async def _upload_chunks(file: UploadFile) -> AsyncIterator[bytes]:
+    """按固定大小从上传对象中依次产出文件块。"""
+
     while chunk := await file.read(1024 * 1024):
         yield chunk
 
 
 def _ensure_public_ip(address: str) -> None:
+    """拒绝指向本机、内网或保留地址的远程头像。"""
+
     parsed = ipaddress.ip_address(address)
     if not parsed.is_global:
         raise bad_request("头像外链不能指向本机或内网地址")
 
 
 async def _validate_remote_url(url: str) -> None:
+    """校验远程头像 URL 协议、主机名和解析后的公网地址。"""
+
     parsed = urlsplit(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         raise bad_request("头像外链必须是有效的 http 或 https 地址")
@@ -117,6 +131,8 @@ async def _validate_remote_url(url: str) -> None:
 
 
 async def _download_remote_avatar(url: str) -> Path:
+    """在大小限制内下载远程头像到受控临时文件。"""
+
     current_url = url.strip()
     async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
         for _ in range(REMOTE_REDIRECT_LIMIT + 1):

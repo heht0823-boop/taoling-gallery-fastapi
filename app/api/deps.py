@@ -1,3 +1,8 @@
+"""认证与权限依赖。
+
+统一解析 Cookie 或 Bearer Token，并为公开、登录和管理员接口提供依赖函数。
+"""
+
 from fastapi import Depends, Request
 from jwt import InvalidTokenError
 from sqlalchemy import select

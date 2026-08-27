@@ -35,6 +35,8 @@ async def live_weather(
     refresh: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
+    """返回指定城市的实况天气和缓存状态。"""
+
     return api_response(
         await weather_service.get_live_weather(
             db,
@@ -74,6 +76,8 @@ async def forecast_weather(
     refresh: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
+    """返回指定城市的多日天气预报。"""
+
     return api_response(
         await weather_service.get_forecast_weather(
             db,
@@ -90,6 +94,8 @@ async def hourly_trend(
     refresh: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
+    """返回前端温度趋势图使用的 24 小时数据。"""
+
     return api_response(
         await weather_service.get_hourly_trend(
             db,
@@ -102,12 +108,16 @@ async def hourly_trend(
 
 @router.get("/warnings")
 async def warnings(city: str | None = None):
+    """返回指定城市或全部城市的气象预警列表。"""
+
     message = "获取气象预警成功" if city else "获取全部气象预警成功"
     return api_response(weather_service.get_warnings(city), message)
 
 
 @router.get("/tips")
 async def life_tips(city: str | None = Query(default=None)):
+    """返回指定城市的六项生活指数建议。"""
+
     return api_response(
         weather_service.get_life_tips(_require_city(city)),
         "获取生活指数成功",

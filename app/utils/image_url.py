@@ -1,3 +1,5 @@
+"""原图、缩略图和头像变体 URL 的规范化工具。"""
+
 import re
 from typing import Any
 from urllib.parse import quote, unquote, urlsplit
@@ -20,6 +22,8 @@ def normalize_image_url(url: str | None) -> str:
 
 
 def _compile_template(template: str, values: dict[str, Any]) -> str:
+    """安全替换图片处理模板中的命名占位符。"""
+
     return re.sub(
         r"\{(\w+)\}",
         lambda match: quote(str(values.get(match.group(1), "")), safe=""),
@@ -28,6 +32,8 @@ def _compile_template(template: str, values: dict[str, Any]) -> str:
 
 
 def _append_query(url: str, query: str) -> str:
+    """把图片处理参数追加到已有或空白查询字符串。"""
+
     if not query:
         return url
     separator = "&" if "?" in url else "?"
@@ -35,6 +41,8 @@ def _append_query(url: str, query: str) -> str:
 
 
 def _local_variant_url(url: str, *, width: int, image_format: str, quality: int) -> str:
+    """为本地上传的单层文件生成静态变体地址。"""
+
     path = unquote(urlsplit(url).path)
     marker = "/uploads/"
     if marker not in path:
@@ -102,6 +110,8 @@ def image_dynamic_variant_url(
     image_format: str | None = None,
     quality: int | None = None,
 ) -> str:
+    """生成通过动态缩略图接口访问的变体地址。"""
+
     safe_width = width or settings.image_thumbnail_width
     safe_format = image_format or settings.image_optimizer_format
     safe_quality = quality or settings.image_optimizer_quality

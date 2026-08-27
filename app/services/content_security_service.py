@@ -19,6 +19,8 @@ from app.core.exceptions import bad_request
 
 
 def _percent_encode(value: object) -> str:
+    """按阿里云 RPC 签名规范编码单个参数。"""
+
     return quote(str(value), safe="~")
 
 
@@ -70,6 +72,8 @@ def normalize_result(raw: dict) -> dict:
 
 
 async def _request_aliyun(service_parameters: dict) -> dict:
+    """签名并发送阿里云文本审核请求。"""
+
     if not settings.ali_access_key_id or not settings.ali_access_key_secret:
         raise bad_request("阿里云内容安全 AccessKey 未配置")
     params = {

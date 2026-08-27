@@ -1,3 +1,5 @@
+"""应用配置加载与路径解析。"""
+
 from functools import lru_cache
 from pathlib import Path
 

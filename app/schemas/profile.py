@@ -7,6 +7,8 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class ProfileUpdateIn(BaseModel):
+    """用户资料局部更新请求。"""
+
     model_config = ConfigDict(extra="ignore")
 
     username: str | None = Field(default=None, max_length=64)
@@ -15,6 +17,8 @@ class ProfileUpdateIn(BaseModel):
 
 
 class PasswordUpdateIn(BaseModel):
+    """验证旧密码后更新密码的请求。"""
+
     model_config = ConfigDict(extra="ignore")
 
     old_password: str = Field(

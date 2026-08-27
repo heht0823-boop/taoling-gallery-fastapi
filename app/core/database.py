@@ -1,3 +1,5 @@
+"""异步 SQLAlchemy 引擎、会话工厂与数据库依赖。"""
+
 from collections.abc import AsyncGenerator
 
 from sqlalchemy import text
@@ -24,11 +26,15 @@ SessionLocal = async_sessionmaker(
 
 # 3. FastAPI依赖函数：获取数据库会话，路由里Depends(get_db)使用
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """为单次请求提供自动关闭的异步数据库会话。"""
+
     async with SessionLocal() as session: # 创建会话，退出自动close释放连接还给连接池
         yield session                    # 把session交给接口使用，接口结束自动清理资源
 
 # 4. 数据库连通性测试函数
 async def check_database() -> None:
+    """执行轻量查询，验证数据库连接是否可用。"""
+
     async with engine.connect() as conn: # 获取一条数据库连接
         await conn.execute(text("SELECT 1"))
         # 执行一条简单SQL，验证账号、地址、网络通不通

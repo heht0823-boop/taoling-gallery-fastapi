@@ -1,3 +1,5 @@
+"""与原 Node 服务一致的统一响应封装。"""
+
 from typing import Any
 
 from fastapi.encoders import jsonable_encoder

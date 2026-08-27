@@ -30,6 +30,8 @@ def is_fresh(
 
 
 def _format_datetime(value: datetime | str | None) -> str:
+    """把数据库时间转换成前端约定的本地时间字符串。"""
+
     if not value:
         return ""
     if isinstance(value, str):
@@ -38,12 +40,16 @@ def _format_datetime(value: datetime | str | None) -> str:
 
 
 def _failure_reason(exc: Exception) -> str:
+    """提取可向前端展示的天气服务降级原因。"""
+
     if isinstance(exc, AppError):
         return exc.message
     return "天气服务暂时不可用"
 
 
 def _cache_meta(fetched_at: datetime, ttl_minutes: int, status: str) -> dict:
+    """构造天气响应统一使用的缓存状态字段。"""
+
     return {
         "cacheStatus": status,
         "cachedAt": _format_datetime(fetched_at),
@@ -111,6 +117,8 @@ async def _find_live_cache(
     db: AsyncSession,
     city: str,
 ) -> WeatherLiveCache | None:
+    """按城市 adcode 查询实况天气缓存。"""
+
     return await db.scalar(select(WeatherLiveCache).where(WeatherLiveCache.adcode == city))
 
 
@@ -118,6 +126,8 @@ async def _find_forecast_cache(
     db: AsyncSession,
     city: str,
 ) -> WeatherForecastCache | None:
+    """按城市 adcode 查询天气预报缓存。"""
+
     return await db.scalar(select(WeatherForecastCache).where(WeatherForecastCache.adcode == city))
 
 
@@ -263,6 +273,8 @@ async def get_batch_live_weather(
 
 
 def _number(value: object, fallback: float) -> float:
+    """容错转换天气数值，失败时使用给定默认值。"""
+
     try:
         return float(str(value))
     except (TypeError, ValueError):

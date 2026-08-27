@@ -18,6 +18,8 @@ from app.utils.pagination import normalize_pagination, pagination_payload
 
 
 def serialize_message_user(user: User | None) -> dict | None:
+    """序列化留言作者及其头像展示字段。"""
+
     if not user:
         return None
     avatar_url = normalize_image_url(user.avatar_url) or None
@@ -35,6 +37,8 @@ def serialize_public_message(
     *,
     replies: list[dict] | None = None,
 ) -> dict:
+    """序列化公开留言，并按需附带一层回复。"""
+
     return {
         "id": message.id,
         "user_id": message.user_id,
