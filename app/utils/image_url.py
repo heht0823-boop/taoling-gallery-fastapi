@@ -119,3 +119,25 @@ def image_thumbnail_url(image: Any, width: int | None = None) -> str:
     if thumbnail_url and thumbnail_url != image_url:
         return image_variant_url(thumbnail_url, width=safe_width, height=safe_width)
     return image_dynamic_variant_url(image.id, width=safe_width)
+
+
+def avatar_variants(avatar_url: str | None) -> dict[str, str | None]:
+    """生成头像的 1x/2x 展示地址；无可用变体时返回空字段。"""
+    source = normalize_image_url(avatar_url)
+    if not source:
+        return {
+            "avatar_thumbnail_url": None,
+            "avatar_srcset": None,
+        }
+
+    small = image_variant_url(source, width=80, height=80)
+    large = image_variant_url(source, width=160, height=160)
+    if small == source and large == source:
+        return {
+            "avatar_thumbnail_url": None,
+            "avatar_srcset": None,
+        }
+    return {
+        "avatar_thumbnail_url": small,
+        "avatar_srcset": f"{small} 1x, {large} 2x" if small and large else None,
+    }

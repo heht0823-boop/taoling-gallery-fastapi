@@ -8,6 +8,7 @@ from app.core.exceptions import bad_request, conflict, unauthorized
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User, UserStat
 from app.services.log_service import write_log
+from app.utils.image_url import avatar_variants, normalize_image_url
 
 
 def serialize_stats(stats: UserStat | None) -> dict:
@@ -32,13 +33,15 @@ def serialize_user(user: User) -> dict:
     :param user: 用户ORM实例
     :return: 用户信息字典
     """
+    avatar_url = normalize_image_url(user.avatar_url) or None
     return {
         "id": user.id,
         "username": user.username,
         "email": user.email,
         "role": user.role,
         "status": user.status,
-        "avatar_url": user.avatar_url,
+        "avatar_url": avatar_url,
+        **avatar_variants(avatar_url),
         "last_login_at": user.last_login_at,
         "created_at": user.created_at,
     }
