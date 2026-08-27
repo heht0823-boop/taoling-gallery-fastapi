@@ -6,6 +6,7 @@ from app.core.exceptions import bad_request, conflict, unauthorized
 from app.core.security import hash_password, verify_password
 from app.models.user import User
 from app.services.auth_service import get_user_with_stats
+from app.services.avatar_service import AvatarAsset
 from app.services.log_service import write_log
 from app.utils.image_url import normalize_image_url
 
@@ -120,3 +121,42 @@ async def update_password(
     )
     await db.commit()
     return {}
+
+
+async def update_avatar(
+    db: AsyncSession,
+    *,
+    user_id: int,
+    asset: AvatarAsset,
+    ip_address: str | None,
+) -> dict:
+    """保存头像地址并返回与前端一致的头像处理结果。"""
+    user = await db.scalar(
+        select(User)
+        .where(User.id == user_id, User.deleted_at.is_(None))
+        .with_for_update()
+    )
+    if not user:
+        raise unauthorized("当前登录用户不存在")
+    user.avatar_url = asset.avatar_url
+    await write_log(
+        db,
+        actor=user,
+        action_type="USER_AVATAR_UPDATE",
+        target_type="user",
+        target_id=user.id,
+        title="修改头像",
+        content=f"{user.username} 修改了头像",
+        ip_address=ip_address,
+    )
+    await db.commit()
+    result = await get_user_with_stats(db, user.id)
+    return {
+        **result,
+        "avatar_upload": {
+            "avatar_url": asset.avatar_url,
+            "avatar_thumbnail_url": asset.thumbnail_url,
+            "avatar_srcset": asset.srcset,
+            "processor_enabled": asset.processor_enabled,
+        },
+    }
